@@ -1,18 +1,28 @@
 = LiquiDoc
 
-LiquiDoc is a system for true single-sourcing of content and data in flat files with various output requirements.
-The command-line utility engages templating systems to parse data into rich text output.
+LiquiDoc is a system for true single-sourcing of technical content and data in flat files.
+It is especially suited for projects with various required output formats, but it is intended for any project with complex, source-controlled input data for use in documentation, user interfaces, and even back-end code.
+The command-line utility engages templating systems to parse complex data into rich text output.
 
-Sources can be flat files formatted in formats such as XML (eXtensible Markup Language), JSON (JavaScript Object Notation), CSV (comma-separated values), and our preferred human-editable format: YAML (Who knows).
+Sources can be flat files in formats such as XML (eXtensible Markup Language), JSON (JavaScript Object Notation), CSV (comma-separated values), and our preferred human-editable format: YAML (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
+LiquiDoc also accepts regular expressions to parse unconventionally formatted files.
 
 Output can (or will) be pretty much any flat file, including semi-structured data like JSON and XML, as well as rich text/multimedia formats like HTML, PDF, slide decks, and more.
 
 == Purpose
 
-The general purpose of this tool is for building documentation from semi-structured or mixed data parsed into secondary markup languages, usually for output as rich text media, or simply as an alternate semi-structured format.
+LiquiDoc is a build tool for documentation projects and modules.
 Unlike tools that are mere converters, LiquiDoc can be configured to perform multiple operations at once for generating content from multiple data source files, each output in various formats based on distinct templates.
+It can be integrated into build- and package-management systems.
+The tool currently provides for very basic configuration of build jobs.
+From a single data file, multiple template-driven parsing operations can be performed to produce totally different output formats from the same dataset.
 
-The tool currently provides for very basic configuration of build jobs, with extensibility coming soon, including a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc files.
+In order to achieve true single sourcing, a data source file in the simplest, most manageable format applicable to the job and preferred by the team, can serve as the canonical authority.
+But rather than using this file as a reference, every stakeholder on the team can draw from it programmatically.
+Feature teams who need structured data in different formats can read the semi-structured source file from a common location and parse it using native libraries.
+Alternatively, LiquiDoc can parse it into a generated source file during the product build procedure and save a copy locally for the application build to pick up.
+
+Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc files into PDF, ePub, and even JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
 
 == Installation
 
@@ -42,6 +52,8 @@ gem 'liquidoc'
 This file is included in the link:https://github.com/briandominick/liquidoc-boilerplate[LiquiDoc boilerplate files].
 
 . Run `bundle install` to prepare dependencies.
++
+If you do not have Bundler installed, use `gem install bundler`, _then repeat this step_.
 
 == Usage
 
@@ -50,7 +62,7 @@ These definitions can be command-line options, or they can be instructed by pres
 
 [TIP]
 .Quickstart
-If you want to test the tool out with dummy data and templates, clone link:https://github.com/briandominick/liquidoc-boilerplate[this boilerplate repo] and run the suggested commands.
+If you want to try the tool out with dummy data and templates, clone link:https://github.com/briandominick/liquidoc-boilerplate[this boilerplate repo] and run the suggested commands.
 
 Give LiquiDoc (1) any proper YAML, JSON, XML, or CSV (with header row) data file and (2) a template mapping any of the data to token variables with Liquid markup -- LiquiDoc returns STDOUT feedback or writes a new file (or multiple files) based on that template.
 
@@ -70,16 +82,300 @@ $ bundle exec liquidoc -d _data/data-sample.yml -t _templates/liquid/tpl-sample.
 [TIP]
 Add `--verbose` to see the steps LiquiDoc is taking.
 
-=== Templates
+=== Configuration
+
+The best way to use LiquiDoc is with a configuration file.
+This not only makes the command line much easier to manage (requiring just a configuration file path argument), it also adds the ability to perform more complex builds.
+
+Here is the basic structure of a valid config file:
+
+[source,yaml]
+.LiquiDoc config file for recognized format parsing
+----
+compile:
+  data: source_data_file.json # <1>
+  builds: # <2>
+    - template: liquid_template.html # <3>
+      output: _output/output_file.html # <4>
+    - template: liquid_template.markdown # <3>
+      output: _output/output_file.md # <4>
+----
+
+<1> If the *data* setting's value is a string, it must be the filename of a format automatically recognized by LiquiDoc: `.yml`, `.json`, `.xml`, or `.csv`.
+
+<2> The *builds* section contains a list of procedures to perform on the data.
+It can contain as many build procedures as you wish to carry out.
+This one instructs two builds.
+
+<3> The *template* setting should be a liquid-formatted file (see <<templating>> below).
+
+<4> The *output* setting is a path and filename where you wish the output to be saved.
+Can also be `stdout`.
+
+[source,yaml]
+.LiquiDoc config file for unrecognized format parsing
+----
+compile:
+  data: # <1>
+    file: source_data_file.json # <2>
+    type: regex # <3>
+    pattern: (?<kee>[A-Z0-9_]+)\s(?<valu>.*)\n # <4>
+  builds: # <5>
+    - template: liquid_template.html
+      output: _output/output_file.html
+    - template: liquid_template.markdown
+      output: _output/output_file.md
+----
+
+<1> In this format, the *data* setting contains several other settings.
+
+<2> The *file* setting accepts _any_ text file, no matter the file extension or data formatting within the file.
+This field is required.
+
+<3> The *type* field can be set to `regex` if you will be using a regular expression pattern to extract data from lines in the file.
+It can also be set to `yml`, `json`, `xml`, or `csv` if your file is in one of these formats but uses a nonstandard extension.
+
+<4> If your type is `regex`, you must supply a regular expression pattern.
+This pattern will be applied to each line of the file, scanning for matches to turn into key-value pairs.
+Your pattern must contain at least one group, denoted with unescaped `(` and `)` markers designating a “named group”, denoted with `?<string>`, where `string` is the name for the variable to assign to any content matching the pattern contained in the rest of the group (everything else between the unescaped parentheses.).
+
+<5> The build section is the same in this configuration.
+
+When you've established a configuration file, you can call it with the argument `-c`/`--config` on the command line.
+
+=== Data Sources
+
+Valid data sources come in a few different types.
+There are the built-in data types (YAML, JSON, XML, CSV) vs free-form type (files processed using regular expressions, designated by the `regex` data type).
+There is also a divide between simple one-record-per-line data types (CSV and regex), which produce one set of parameters for every line in the source file, versus nested data types that can reflect far more complex structures.
+
+==== Native Nested Data (YAML, JSON, XML)
+
+The native nested formats are actually the most straightforward.
+So long as your filename has a conventional extension, you can just pass a file path for this setting.
+That is, if your file ends in `.yml`, `.json`, or `.xml`, and your data is properly formatted, LiquiDoc will parse it appropriately.
+
+For standard-format files that have non-standard file extensions (for example, `.js` rather than `.json` for a JSON file), you must declare a type explicitly.
+
+[source,yaml]
+.Example -- Instructing correct type for mislabeled JSON file
+----
+compile:
+  data:
+    file: source_data_file.js
+    type: json
+  builds:
+    - template: liquid_template.html
+      output: _output/output_file.html
+----
+
+Once LiquiDoc knows the right file type, it will parse the file into a Ruby hash data structure for further processing.
+
+==== CSV Data
+
+Data ingested from CSV files will use the first row as key names for columnar data in the subsequent rows, as shown below.
+
+.Example -- sample.csv showing header/key and value rows
+[source,csv]
+----
+name,description,default,required
+enabled,Whether project is active,,true
+timeout,The duration of a session (in seconds),300,false
+----
+
+The above source data, parsed as a CSV file, will yield an _array_.
+Each array item represents a row from the CSV file (except the first row).
+Each array item contains a _structure_, or what Ruby calls a _hash_.
+As represented in the CSV example above, if the structure contains more than one key-value pair (more than one “column” in the source), all such pairs will be siblings, not nested or hierarchical.
+
+.Example -- array derived from sample.csv, with values depicted
+[source,ruby]
+----
+data[0].name #=> enabled
+data[0].description #=> Whether project is active
+data[0].default #=> nil
+data[0].required #=> true
+data[1].name #=> timeout
+data[1].description #=> The duration of a session (in seconds)
+data[1].default #=> 300
+data[1].required #=> false
+----
+
+==== Free-form Data
+
+Free-form data can only be parsed using regex patterns -- otherwise LiquiDoc has no idea what to consider data and what to consider noise.
+
+Any file organized with one record per line may be consumed and parsed by LiquiDoc, provided you tell the parser which variables to extract from where.
+The parser will read each line individually, applying your regex pattern to extract data using named groups.
+
+[TIP]
+.Learn regular expressions
+If you're already familiar enough with regex, this note is not for you.
+If you deal with docs but are not a regex user, become one.
+I promise you will deem the initial hurdles worth surmounting.
+
+.Example -- sample.free free-form data source file
+----
+A_B A thing that *SnASFHE&"\|+1Dsaghf true
+G_H Some text for &hdf 1t`F false
+----
+
+.Example -- regular expression with named groups for variable generation
+[source,regex]
+----
+^(?<code>[A-Z_]+)\s(?<description>.*)\s(?<required>true|false)\n
+----
+
+.Example -- array derived from sample.free using above regex pattern
+[source,ruby]
+----
+data[0].code #=> A_B
+data[0].description #=> A thing that *SnASFHE&"\|+1Dsaghf
+data[0].required #=> true
+data[1].code #=> G_H
+data[1].description #=> Some text for &hdf'" 1t`F
+data[1].required #=> false
+----
+
+Free-form/regex parsing is obviously more complicated than the other data types.
+Its use case is usually when you simply cannot control the form your source takes.
+
+The regex type is also handy when the content of some fields would be burdensome to store in conventional semi-structured formats like those natively parsed by LiquiDoc.
+This is the case for jumbled content containing characters that require escaping, so you can keep source like that from the example above in the simplest possible form.
+
+=== Templating
 
 LiquiDoc will add the powers of Asciidoctor in a future release, enabling initial reformatting of complex source data _into_ AsciiDoc format using Liquid templates, followed by final publishing into rich formats such as PDF, HTML, and even slide presentations.
 
-link:https://help.shopify.com/themes/liquid/basics[*Liquid*] is used for complex variable data, typically for iterated output.
-For instance, an array of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
+link:https://help.shopify.com/themes/liquid/basics[*Liquid*] is used for parsing complex variable data, typically for iterated output.
+For instance, a data structure of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
+
+Any valid Liquid-formatted template is accepted, in the form of a text file with any extension.
+For data sourced in CSV format or extracted through regex source parsing, all data is passed to the Liquid template parser as an array called *data*, containing one or more rows to be iterated through.
+Data sourced in YAML, XML, or JSON may be passed as complex structures with custom names determined in the file contents.
+
+Looping through known data formats is fairly straightforward.
+A for loop iterates through your data, item by item.
+Each item or row contains one or more key-value pairs.
+
+[[rows_asciidoc]]
+.Example -- rows.asciidoc Liquid template
+[source,liquid]
+----
+{% for row in data %}{{ row.name }}::
+{{ row.description }}
++
+[horizontal.simple]
+Required:: {% if row.required == "true" %}*Yes*{% else %}No{% endif %}
+{% endfor %}
+----
+
+In <<rows_asciidoc>>, we're instructing Liquid to iterate through our data items, generating a data structure called `row` each time.
+The double-curly-bracketed tags convey variables to evaluate.
+This means `{{ row.name }}` is intended to express the value of the *name* parameter in the item presently being parsed.
+The other curious marks such as `::` and `[horizontal.simple]` are AsciiDoc markup -- they are the formatting we are trying to introduce to give the content form and semantic relevance.
+
+.Non-printing Markup
+****
+In Liquid and most templating systems, any row containing a non-printing “tag” will print leave a blank line in the output after parsing.
+For this reason, it is advised that you stack tags horizontally when you do not wish to generate a blank line, as with the first row above.
+A non-printing tag such as `{% endfor %}` will generate a blank line that is convenient in the output but likely to cause clutter here.
+
+This side effect of templating is unfortunate, as it discourages elegant, “accordian-style” code nesting, as in the HTML example below (<<parsed_html>>).
+In the end, ugly Liquid templates can generate elegant markup output with exquisite precision.
+****
+
+The above would generate the following:
+
+[[asciidoc_formatted_source]]
+.Example -- AsciiDoc-formatted output
+[source,asciidoc]
+----
+A_B::
+A thing that *SnASFHE&"\|+1Dsaghf
++
+[horizontal.simple]
+Required::: *Yes*
+
+G_H::
+Some text for &hdf'" 1t`F
++
+[horizontal.simple]
+Required::: No
+----
+
+The generically styled AsciiDoc rich text reflects the distinctive structure with (very little) more elegance.
+
+.AsciiDoc rich text (rendered)
+====
+A_B::
+A thing that *SnASFHE&"\|+1Dsaghf
++
+[horizontal.simple]
+Required::: *Yes*
+
+G_H::
+Some text for &hdf'" 1t`F
++
+[horizontal.simple]
+Required::: No
+====
+
+The implied structures are far more evident when displayed as HTML derived from Asciidoctor parsing of the LiquiDoc-generated AsciiDoc source (from <<asciidoc_formatted_source>>).
+
+[[parsed_html]]
+.AsciiDoc parsed into HTML
+[source,html]
+----
+<div class="dlist data-line-1">
+  <dl>
+    <dt class="hdlist1">A_B</dt>
+    <dd>
+      <p>A thing that *SnASFHE&amp;"\|+1Dsaghf</p>
+      <div class="hdlist data-line-5 simple">
+        <table>
+          <tr>
+            <td class="hdlist1">
+              Required
+            </td>
+            <td class="hdlist2">
+              <p><strong>Yes</strong></p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </dd>
+    <dt class="hdlist1">G_H</dt>
+    <dd>
+      <p>Some text for &amp;hdf'" 1t`F</p>
+      <div class="hdlist data-line-11 simple">
+        <table>
+          <tr>
+            <td class="hdlist1">
+              Required
+            </td>
+            <td class="hdlist2">
+              <p>No</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </dd>
+  </dl>
+</div>
+----
+
+Remember, all this started out as that little old free-form text file.
+
+.Example -- sample.free free-form data source file
+----
+A_B A thing that *SnASFHE&"\|+1Dsaghf true
+G_H Some text for &hdf 1t`F false
+----
 
 === Output
 
-After this parsing, files are written in any of the given output formats, or else just printed to screen as STDOUT (when you add the `--stdout` flag to your command).
+After this parsing, files are written in any of the given output formats, or else just written to system as STDOUT (when you add the `--stdout` flag to your command or set `output: stdout` in your config file).
 Liquid templates can be used to produce any flat-file format imaginable.
 Just format valid syntax with your source data and Liquid template, then save with the proper extension, and you're all set.
 
