@@ -112,33 +112,80 @@ def config_build config_file
     raise "Could not load #{config_file}"
   end
   validate_config_structure(config)
-  if config['compile']
-    for src in config['compile']
-      data = src['data']
-      for cfgn in src['builds']
-        template = @base_dir + cfgn['template']
-        unless cfgn['output'].downcase == "stdout"
-          output = @base_dir + cfgn['output']
-        else
-          output = "stdout"
-        end
-        liquify(data, template, output)
+  for a in config
+    Action.new(a) # create an instance of the Action class for validation
+    case a['action']
+    when "parse"
+      data = data_hashify(a['data'])
+      for b in a['builds']
+        Build.new(b, a['action']) # create an instance of the Build class
+        liquify(data, b['template'], b['output'])
+      end
+    when "migrate"
+      @logger.warn "Migrate actions not yet implemented."
+    when "render"
+      @logger.warn "Render actions not yet implemented."
+    when "deploy"
+      @logger.warn "Deploy actions not yet implemented."
+    else
+      @logger.warn "The action #{a} is not valid."
+    end
+  end
+end
+
+class Action
+
+  def initialize a
+    @type = a['action']
+  end
+
+  def parse
+    validate("data,builds")
+  end
+
+  def migrate
+    validate("source,target")
+  end
+
+  def render
+    validate("map,builds")
+  end
+
+  def deploy
+    validate("config")
+  end
+
+  def validate required
+    for req in required
+      if (defined?(req)).nil?
+        @logger.error "Configuration missing #{@type} action's #{req} setting."
+        raise ActionSettingMissing
       end
     end
   end
-  if config['publish']
-    begin
-      for pub in config['publish']
-        for bld in pub['builds']
-          if bld['publish']
-            publish(pub, bld)
-          else
-            @logger.warn "Publish build for '#{index}' backend '#{backend}' disabled."
-          end
-        end
+end
+
+class Build
+
+  def initialize build, action
+    @action = action
+    @build = build
+  end
+
+  def is_parse
+    validate("template,output")
+  end
+
+  def is_render
+    validate("type,output")
+  end
+
+  def validate required
+    for req in required
+      if (defined?(req)).nil?
+        @logger.error "Configuration missing #{@type} action's #{req} setting."
+        raise ActionSettingMissing
       end
-    rescue Exception => ex
-      @logger.error "Error during publish action. #{ex}"
     end
   end
 end
@@ -163,13 +210,15 @@ def validate_file_input file, type
 end
 
 def validate_config_structure config
-  unless config.is_a? Hash
-    message =  "The configuration file is not properly structured; it is not a hash"
+  unless config.is_a? Array
+    message =  "The configuration file is not properly structured."
     @logger.error message
-    raise message
+    raise "ConfigStructureError"
   else
-    unless config['publish'] or config['compile']
-      raise "Config file must have at least one top-level section named 'publish:' or 'compile:'."
+    if (defined?(config['action'])).nil?
+      message =  "Every listing in the configuration file needs an action type declaration."
+      @logger.error message
+      raise "ConfigStructureError"
     end
   end
 # TODO More validation needed
