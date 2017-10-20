@@ -8,15 +8,32 @@ require 'logger'
 require 'csv'
 require 'crack/xml'
 
+# ===
+# Table of Contents
+# ===
+#
+# 1. dependencies stack
+# 2. default settings
+# 3. general methods
+# 4. object classes
+# 5. action-specific methods
+# 5a. parse methods
+# 5b. migrate methods
+# 5c. render methods
+# 6. text manipulation
+# 7. command/option parser
+# 8. executive method calls
+
+# ===
 # Default settings
+# ===
+
 @base_dir_def = Dir.pwd + '/'
 @base_dir = @base_dir_def
 @configs_dir = @base_dir + '_configs'
 @templates_dir = @base_dir + '_templates/'
 @data_dir = @base_dir + '_data/'
 @output_dir = @base_dir + '_output/'
-@config_file_def = @base_dir + '_configs/cfg-sample.yml'
-@config_file = @config_file_def
 @attributes_file_def = '_data/asciidoctor.yml'
 @attributes_file = @attributes_file_def
 @pdf_theme_file = 'theme/pdf-theme.yml'
@@ -31,73 +48,10 @@ require 'crack/xml'
 end
 
 # ===
-# General methods
+# Executive methods
 # ===
 
-# Pull in a semi-structured data file, converting contents to a Ruby hash
-def get_data data
-  # data must be a hash produced by data_hashify()
-  if data['type']
-    if data['type'].downcase == "yaml"
-      data['type'] = "yml"
-    end
-    unless data['type'].downcase.match(/yml|json|xml|csv|regex/)
-      @logger.error "Declared data type must be one of: yaml, json, xml, csv, or regex."
-      raise "DataTypeUnrecognized"
-    end
-  else
-    unless data['ext'].match(/\.yml|\.json|\.xml|\.csv/)
-      @logger.error "Data file extension must be one of: .yml, .json, .xml, or .csv or else declared in config file."
-      raise "FileExtensionUnknown (#{data[ext]})"
-    end
-    data['type'] = data['ext']
-    data['type'].slice!(0) # removes leading dot char
-  end
-  case data['type']
-  when "yml"
-    begin
-      return YAML.load_file(data['file'])
-    rescue Exception => ex
-      @logger.error "There was a problem with the data file. #{ex.message}"
-    end
-  when "json"
-    begin
-      return JSON.parse(File.read(data['file']))
-    rescue Exception => ex
-      @logger.error "There was a problem with the data file. #{ex.message}"
-    end
-  when "xml"
-    begin
-      data = Crack::XML.parse(File.read(data['file']))
-      return data['root']
-    rescue Exception => ex
-      @logger.error "There was a problem with the data file. #{ex.message}"
-    end
-  when "csv"
-    output = []
-    i = 0
-    begin
-      CSV.foreach(data['file'], headers: true, skip_blanks: true) do |row|
-        output[i] = row.to_hash
-        i = i+1
-      end
-      output = {"data" => output}
-      return output
-    rescue
-      @logger.error "The CSV format is invalid."
-    end
-  when "regex"
-    if data['pattern']
-      return parse_regex(data['file'], data['pattern'])
-    else
-      @logger.error "You must supply a regex pattern with your free-form data file."
-      raise "MissingRegexPattern"
-    end
-  end
-end
-
 # Establish source, template, index, etc details for build jobs from a config file
-# TODO This needs to be turned into a Class?
 def config_build config_file
   @logger.debug "Using config file #{config_file}."
   validate_file_input(config_file, "config")
@@ -105,21 +59,29 @@ def config_build config_file
     config = YAML.load_file(config_file)
   rescue
     unless File.exists?(config_file)
-      @logger.error "Config file not found."
+      @logger.error "Config file #{config_file} not found."
     else
-      @logger.error "Problem loading config file. Exiting."
+      @logger.error "Problem loading config file #{config_file}. Exiting."
     end
-    raise "Could not load #{config_file}"
+    raise "ConfigFileError"
   end
-  validate_config_structure(config)
-  for a in config
-    Action.new(a) # create an instance of the Action class for validation
-    case a['action']
+  cfg = BuildConfig.new(config) # convert the config file to a new object called 'cfg'
+  iterate_build(cfg)
+end
+
+def iterate_build cfg
+  stepcount = 0
+  for step in cfg.steps # iterate through each node in the 'config' object, which should start with an 'action' parameter
+    stepcount = stepcount + 1
+    step = BuildConfigStep.new(step) # create an instance of the Action class, validating the top-level step hash (now called 'step') in the process
+    type = step.type
+    case type # a switch to evaluate the 'action' parameter for each step in the iteration...
     when "parse"
-      data = data_hashify(a['data'])
-      for b in a['builds']
-        Build.new(b, a['action']) # create an instance of the Build class
-        liquify(data, b['template'], b['output'])
+      data = DataSrc.new(step.data)
+      builds = step.builds
+      for bld in builds
+        build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
+        liquify(data, build.template, build.output) # perform the liquify operation
       end
     when "migrate"
       @logger.warn "Migrate actions not yet implemented."
@@ -128,64 +90,7 @@ def config_build config_file
     when "deploy"
       @logger.warn "Deploy actions not yet implemented."
     else
-      @logger.warn "The action #{a} is not valid."
-    end
-  end
-end
-
-class Action
-
-  def initialize a
-    @type = a['action']
-  end
-
-  def parse
-    validate("data,builds")
-  end
-
-  def migrate
-    validate("source,target")
-  end
-
-  def render
-    validate("map,builds")
-  end
-
-  def deploy
-    validate("config")
-  end
-
-  def validate required
-    for req in required
-      if (defined?(req)).nil?
-        @logger.error "Configuration missing #{@type} action's #{req} setting."
-        raise ActionSettingMissing
-      end
-    end
-  end
-end
-
-class Build
-
-  def initialize build, action
-    @action = action
-    @build = build
-  end
-
-  def is_parse
-    validate("template,output")
-  end
-
-  def is_render
-    validate("type,output")
-  end
-
-  def validate required
-    for req in required
-      if (defined?(req)).nil?
-        @logger.error "Configuration missing #{@type} action's #{req} setting."
-        raise ActionSettingMissing
-      end
+      @logger.warn "The action `#{type}` is not valid."
     end
   end
 end
@@ -201,9 +106,7 @@ def validate_file_input file, type
       error = "The #{type} file (#{file}) was not found."
     end
   end
-  unless error
-    @logger.debug "Input file validated for #{type} file #{file}."
-  else
+  if error
     @logger.error "Could not validate input file: #{error}"
     raise "InvalidInput"
   end
@@ -213,28 +116,248 @@ def validate_config_structure config
   unless config.is_a? Array
     message =  "The configuration file is not properly structured."
     @logger.error message
-    raise "ConfigStructureError"
+    raise "ConfigStructError"
   else
     if (defined?(config['action'])).nil?
       message =  "Every listing in the configuration file needs an action type declaration."
       @logger.error message
-      raise "ConfigStructureError"
+      raise "ConfigStructError"
     end
   end
 # TODO More validation needed
 end
 
-def data_hashify data_var
-  # TODO make datasource config a class
-  if data_var.is_a?(String)
-    data = {}
-    data['file'] = data_var
-    data['ext'] = File.extname(data_var)
-  else # add ext to the hash
-    data = data_var
-    data['ext'] = File.extname(data['file'])
+# ===
+# Core classes
+# ===
+
+# For now BuildConfig is mostly to objectify the primary build 'action' steps
+class BuildConfig
+
+  def initialize config
+
+    if (defined?(config['compile'][0])) # The config is formatted for vesions < 0.3.0; convert it
+      config = deprecated_format(config)
+    end
+
+    # validations
+    unless config.is_a? Array
+      raise "ConfigStructError"
+    end
+
+    @@cfg = config
   end
-  return data
+
+  def steps
+    @@cfg
+  end
+
+  def deprecated_format config # for backward compatibility with 0.1.0 and 0.2.0
+    puts "You are using a deprecated configuration file structure. Update your config files; support for this structure will be dropped in version 1.0.0."
+    # There's only ever one item in the 'compile' array, and only one action type ("parse")
+    config['compile'].each do |n|
+      n.merge!("action" => "parse") # the action type was not previously declared
+    end
+    return config['compile']
+  end
+
+end #class BuildConfig
+
+class BuildConfigStep
+
+  def initialize step
+    @@step = step
+    @@logger = Logger.new(STDOUT)
+    if (defined?(@@step['action'])).nil?
+      @logger.error "Every step in the configuration file needs an 'action' type declared."
+      raise "ConfigStructError"
+    end
+  end
+
+  def type
+    return @@step['action']
+  end
+
+  def data
+    return @@step['data']
+  end
+
+  def builds
+    return @@step['builds']
+  end
+
+  def self.validate reqs
+    for req in reqs
+      if (defined?(@@step[req])).nil?
+        @@logger.error "Every #{@@step['action']}-type in the configuration file needs a '#{req}' declaration."
+        raise "ConfigStructError"
+      end
+    end
+  end
+
+end #class Action
+
+class Build
+
+  def initialize build, type
+    @@build = build
+    @@type = type
+    @@logger = Logger.new(STDOUT)
+    required = []
+    case type
+    when "parse"
+      required = ["template,output"]
+    when "render"
+      required = ["index,output"]
+    when "migrate"
+      required = ["source,target"]
+    end
+    for req in required
+      if (defined?(req)).nil?
+        raise ActionSettingMissing
+      end
+    end
+  end
+
+  def template
+    @@build['template']
+  end
+
+  def output
+    @@build['output']
+  end
+
+  def index
+    @@build['index']
+  end
+
+  def source
+    @@build['source']
+  end
+
+  def target
+    @@build['target']
+  end
+
+end #class Build
+
+class DataSrc
+  # initialization means establishing a proper hash for the 'data' param
+  def initialize datasrc
+    @@datasrc = {}
+    if datasrc.is_a? String # create a hash out of the filename
+      begin
+        @@datasrc['file'] = datasrc
+        @@datasrc['ext'] = File.extname(datasrc)
+        @@datasrc['type'] = false
+        @@datasrc['pattern'] = false
+      rescue
+        raise "InvalidDataFilename"
+      end
+    else
+      if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
+        @@datasrc['file'] = datasrc['file']
+        @@datasrc['ext'] = File.extname(datasrc['file'])
+        if (defined?(datasrc['pattern']))
+          @@datasrc['pattern'] = datasrc['pattern']
+        end
+        if (defined?(datasrc['type']))
+          @@datasrc['type'] = datasrc['type']
+        end
+      else # datasrc is neither String nor Hash
+        raise "InvalidDataSource"
+      end
+    end
+  end
+
+  def file
+    @@datasrc['file']
+  end
+
+  def ext
+    @@datasrc['ext']
+  end
+
+  def type
+    if @@datasrc['type'] # if we're carrying a 'type' setting for data, pass it along
+      datatype = @@datasrc['type']
+      if datatype.downcase == "yaml" # This is an expected common error, so let's do the user a solid
+        datatype = "yml"
+      end
+    else # If there's no 'type' defined, extract it from the filename and validate it
+      unless @@datasrc['ext'].downcase.match(/\.yml|\.json|\.xml|\.csv/)
+        # @logger.error "Data file extension must be one of: .yml, .json, .xml, or .csv or else declared in config file."
+        raise "FileExtensionUnknown"
+      end
+      datatype = @@datasrc['ext']
+      datatype = datatype[1..-1] # removes leading dot char
+    end
+    unless datatype.downcase.match(/yml|json|xml|csv|regex/) # 'type' must be one of these permitted vals
+      # @logger.error "Declared data type must be one of: yaml, json, xml, csv, or regex."
+      raise "DataTypeUnrecognized"
+    end
+    datatype
+  end
+
+  def pattern
+    @@datasrc['pattern']
+  end
+end
+
+# ===
+# Action-specific methods
+#
+# PARSE-type build methods
+# ===
+
+# Pull in a semi-structured data file, converting contents to a Ruby hash
+def ingest_data datasrc
+# Must be passed a proper data object (there must be a better way to validate arg datatypes)
+  unless datasrc.is_a? Object
+    raise "InvalidDataObject"
+  end
+  # This method should really begin here, once the data object is in order
+  case datasrc.type
+  when "yml"
+    begin
+      return YAML.load_file(datasrc.file)
+    rescue Exception => ex
+      @logger.error "There was a problem with the data file. #{ex.message}"
+    end
+  when "json"
+    begin
+      return JSON.parse(File.read(datasrc.file))
+    rescue Exception => ex
+      @logger.error "There was a problem with the data file. #{ex.message}"
+    end
+  when "xml"
+    begin
+      data = Crack::XML.parse(File.read(datasrc.file))
+      return data['root']
+    rescue Exception => ex
+      @logger.error "There was a problem with the data file. #{ex.message}"
+    end
+  when "csv"
+    output = []
+    i = 0
+    begin
+      CSV.foreach(datasrc.file, headers: true, skip_blanks: true) do |row|
+        output[i] = row.to_hash
+        i = i+1
+      end
+      output = {"data" => output}
+      return output
+    rescue
+      @logger.error "The CSV format is invalid."
+    end
+  when "regex"
+    if datasrc.pattern
+      return parse_regex(datasrc.file, datasrc.pattern)
+    else
+      @logger.error "You must supply a regex pattern with your free-form data file."
+      raise "MissingRegexPattern"
+    end
+  end
 end
 
 def parse_regex data_file, pattern
@@ -263,17 +386,15 @@ def parse_regex data_file, pattern
   return output
 end
 
-# ===
-# Liquify BUILD methods
-# ===
-
-# Parse given data using given template, saving to given filename
-def liquify data, template_file, output
+# Parse given data using given template, generating given output
+def liquify datasrc, template_file, output
   @logger.debug "Executing liquify parsing operation."
-  data = data_hashify(data)
-  validate_file_input(data['file'], "data")
+  if datasrc.is_a? String
+    datasrc = DataSrc.new(datasrc)
+  end
+  validate_file_input(datasrc.file, "data")
   validate_file_input(template_file, "template")
-  data = get_data(data) # gathers the data
+  data = ingest_data(datasrc)
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
@@ -302,6 +423,10 @@ def liquify data, template_file, output
   end
 end
 
+# ===
+# MIGRATE-type methods
+# ===
+
 # Copy images and other assets into output dir for HTML operations
 def copy_assets src, dest
   if @recursive
@@ -322,7 +447,7 @@ def copy_assets src, dest
 end
 
 # ===
-# PUBLISH methods
+# RENDER-type methods
 # ===
 
 # Gather attributes from a fixed attributes file
@@ -357,7 +482,7 @@ def publish pub, bld
 end
 
 # ===
-# Misc Classes, Modules, filters, etc
+# Text manipulation Classes, Modules, filters, etc
 # ===
 
 class String
@@ -385,7 +510,7 @@ class String
 
 end
 
-# Liquid modules for text manipulation
+# Extending Liquid filters/text manipulation
 module CustomFilters
   def plainwrap input
     input.wrap
@@ -431,11 +556,17 @@ module CustomFilters
 
 end
 
+# register custom Liquid filters
 Liquid::Template.register_filter(CustomFilters)
+
+
+# ===
+# Command/options parser
+# ===
 
 # Define command-line option/argument parameters
 # From the root directory of your project:
-# $ ./parse.rb --help
+# $ liquidoc --help
 command_parser = OptionParser.new do|opts|
   opts.banner = "Usage: liquidoc [options]"
 
@@ -491,7 +622,6 @@ command_parser = OptionParser.new do|opts|
 
 end
 
-# Parse options.
 command_parser.parse!
 
 # Upfront debug output
@@ -499,10 +629,9 @@ command_parser.parse!
 @logger.debug "Config file: #{@config_file}"
 @logger.debug "Index file: #{@index_file}"
 
-# Parse data into docs!
-# liquify() takes the names of a Liquid template, a data file, and an output doc.
-# Input and output file extensions are non-determinant; your template
-# file establishes the structure.
+# ===
+# Execute
+# ===
 
 unless @config_file
   if @data_file
