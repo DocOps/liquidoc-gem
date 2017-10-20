@@ -1,35 +1,51 @@
 = LiquiDoc
+// tag::overview[]
+LiquiDoc enables true single-sourcing of technical content and data.
+It is especially suited for documentation projects with various required output formats, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
+The highly configurable command-line utility engages template engines to parse complex data into rich text output, from *blogs* to *books* to *knowledge bases* to *slide presentations*.
 
-LiquiDoc is a system for true single-sourcing of technical content and data in flat files.
-It is especially suited for projects with various required output formats, but it is intended for any project with complex, source-controlled input data for use in documentation, user interfaces, and even back-end code.
-The command-line utility engages templating systems to parse complex data into rich text output.
-
-Sources can be flat files in formats such as XML (eXtensible Markup Language), JSON (JavaScript Object Notation), CSV (comma-separated values), and our preferred human-editable format: YAML (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
-LiquiDoc also accepts regular expressions to parse unconventionally formatted files.
+Sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
+LiquiDoc also accepts *regular expressions* to parse unconventionally formatted files.
 
 Output can (or will) be pretty much any flat file, including semi-structured data like JSON and XML, as well as rich text/multimedia formats like HTML, PDF, slide decks, and more.
+// end::overview[]
+// tag::rocana-note[]
+[NOTE]
+While the first two releases of LiquiDoc were released under the MIT license by my former employer, I do not believe the https://github.com/scalingdata/liquidoc-gem[originating repo] will be maintained.
+Therefore, as of version 0.3.0, I will maintain this fork under the MIT license.
+More below under <<Contributing>> and <<License>>.
+
+// end::rocana-note[]
 
 == Purpose
-
-LiquiDoc is a build tool for documentation projects and modules.
-Unlike tools that are mere converters, LiquiDoc can be configured to perform multiple operations at once for generating content from multiple data source files, each output in various formats based on distinct templates.
+// tag::purpose[]
+LiquiDoc is a build tool for documentation projects or for the documentation component of a larger project.
+Unlike tools that are mere converters, LiquiDoc can be easily configured to perform multiple consecutive routines for generating content from multiple data source files, each output in various formats based on distinct templates.
 It can be integrated into build- and package-management systems.
+
 The tool currently provides for very basic configuration of build jobs.
-From a single data file, multiple template-driven parsing operations can be performed to produce totally different output formats from the same dataset.
+From any given data file, multiple template-driven parsing operations can be performed to produce totally different output formats from the same dataset.
+
+=== Single-sourcing Docs _and_ Code
 
 In order to achieve true single sourcing, a data source file in the simplest, most manageable format applicable to the job and preferred by the team, can serve as the canonical authority.
-But rather than using this file as a reference, every stakeholder on the team can draw from it programmatically.
+But rather than using this file as a mere _reference_ like most docs, every stakeholder on the team can draw from it programmatically.
 Feature teams who need structured data in different formats can read the semi-structured source file from a common location and parse it using native libraries.
-Alternatively, LiquiDoc can parse it into a generated source file during the product build procedure and save a copy locally for the application build to pick up.
+Alternatively, LiquiDoc can parse it into a generated source file during the product build procedure and save a copy in the target/build tree for the application build to pick up.
 
-Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc files into PDF, ePub, and even JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
+=== Coming Soon
 
+Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files into PDF, ePub, and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
+See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
+// end::purpose[]
+
+// tag::installation[]
 == Installation
 
 [NOTE]
 Your system must be running Ruby 2.3 or later.
 Linux and MacOS users should be okay.
-See https://www.ruby-lang.org/en/downloads/[Ruby downloads] if you're on Windows.
+See https://rubyinstaller.org/downloads[rubyinstaller.org] if you're on Windows.
 
 . Create a file called `Gemfile` in your project's root directory.
 
@@ -51,12 +67,29 @@ gem 'liquidoc'
 [TIP]
 This file is included in the link:https://github.com/briandominick/liquidoc-boilerplate[LiquiDoc boilerplate files].
 
+. Open a terminal (command prompt).
++
+If you don't have a preferred terminal application, use your OS's magic search and look for `terminal`.
+
+. Navigate to your project root directory.
++
+.Example
+----
+cd Documents/workspace/my_project
+----
+
 . Run `bundle install` to prepare dependencies.
 +
-If you do not have Bundler installed, use `gem install bundler`, _then repeat this step_.
+If you do not have Bundler installed, Ruby will tell you.
+Enter `gem install bundler`, let Bundler install, _then repeat this step_.
+
+Cool!
+LiquiDoc should now be ready to run with Bundler support, which is the strongly recommended approach.
+// tag::installation[]
 
 == Usage
-
+// tag::usage[]
+// tag::usage-intro[]
 LiquiDoc provides a Ruby command-line tool for processing source files into new text files based on templates you define.
 These definitions can be command-line options, or they can be instructed by preset configurations you define in separate configuration files.
 
@@ -66,24 +99,18 @@ If you want to try the tool out with dummy data and templates, clone link:https:
 
 Give LiquiDoc (1) any proper YAML, JSON, XML, or CSV (with header row) data file and (2) a template mapping any of the data to token variables with Liquid markup -- LiquiDoc returns STDOUT feedback or writes a new file (or multiple files) based on that template.
 
-.Example -- Generate sample output from files established in a configuration
+.Example -- Generate sample output from files passed as CLI arguments
 ----
-$ bundle exec liquidoc -c _configs/cfg-sample.yml --stdout
-----
-
-[TIP]
-Repeat without the `--stdout` flag and you'll find the generated files in `_output/`.
-
-.Example -- Generate output from files passed as CLI arguments
-----
-$ bundle exec liquidoc -d _data/data-sample.yml -t _templates/liquid/tpl-sample.asciidoc -o sample.adoc
+bundle exec liquidoc -d _data/data-sample.yml -t _templates/liquid/sample.asciidoc -o _output/sample.adoc
 ----
 
 [TIP]
 Add `--verbose` to see the steps LiquiDoc is taking.
 
-=== Configuration
+// end::usage-intro[]
 
+=== Configuration
+// tag::configuration[]
 The best way to use LiquiDoc is with a configuration file.
 This not only makes the command line much easier to manage (requiring just a configuration file path argument), it also adds the ability to perform more complex builds.
 
@@ -92,35 +119,42 @@ Here is the basic structure of a valid config file:
 [source,yaml]
 .LiquiDoc config file for recognized format parsing
 ----
-compile:
-  data: source_data_file.json # <1>
-  builds: # <2>
-    - template: liquid_template.html # <3>
-      output: _output/output_file.html # <4>
-    - template: liquid_template.markdown # <3>
-      output: _output/output_file.md # <4>
+- action: parse # <1>
+  data: source_data_file.json # <2>
+  builds: # <3>
+    - template: liquid_template.html # <4>
+      output: _output/output_file.html # <5>
+    - template: liquid_template.markdown # <4>
+      output: _output/output_file.md # <5>
 ----
 
-<1> If the *data* setting's value is a string, it must be the filename of a format automatically recognized by LiquiDoc: `.yml`, `.json`, `.xml`, or `.csv`.
+<1> The top-level `- ` denotes a new, consecutively executed “step” in the build.
+The *action* parameter determines what type of action this step will perform.
+The options are `parse`, `migrate`, `render`, and `deploy`.
 
-<2> The *builds* section contains a list of procedures to perform on the data.
-It can contain as many build procedures as you wish to carry out.
+<2> If the *data* setting's value is a string, it must be the filename of a format automatically recognized by LiquiDoc: `.yml`, `.json`, `.xml`, or `.csv`.
+Otherwise, *data* must contain child settings for *file* and *type*.
+
+<3> The *builds* section contains a list of procedures to perform on the data.
+It can include as many subroutines as you wish to perform.
 This one instructs two builds.
 
-<3> The *template* setting should be a liquid-formatted file (see <<templating>> below).
+<4> The *template* setting should be a liquid-formatted file (see <<templating>> below).
 
-<4> The *output* setting is a path and filename where you wish the output to be saved.
+<5> The *output* setting is a path and filename where you wish the output to be saved.
 Can also be `stdout`.
 
+.Advanced Data Ingest
+****
 [source,yaml]
 .LiquiDoc config file for unrecognized format parsing
 ----
-compile:
+- action: parse
   data: # <1>
     file: source_data_file.json # <2>
     type: regex # <3>
     pattern: (?<kee>[A-Z0-9_]+)\s(?<valu>.*)\n # <4>
-  builds: # <5>
+  builds:
     - template: liquid_template.html
       output: _output/output_file.html
     - template: liquid_template.markdown
@@ -138,10 +172,19 @@ It can also be set to `yml`, `json`, `xml`, or `csv` if your file is in one of t
 <4> If your type is `regex`, you must supply a regular expression pattern.
 This pattern will be applied to each line of the file, scanning for matches to turn into key-value pairs.
 Your pattern must contain at least one group, denoted with unescaped `(` and `)` markers designating a “named group”, denoted with `?<string>`, where `string` is the name for the variable to assign to any content matching the pattern contained in the rest of the group (everything else between the unescaped parentheses.).
+****
 
-<5> The build section is the same in this configuration.
+When you have established a configuration file, you can call it with the argument `-c`/`--config` on the command line.
 
-When you've established a configuration file, you can call it with the argument `-c`/`--config` on the command line.
+.Example -- Generate sample output from files established in a configuration
+----
+bundle exec liquidoc -c _configs/cfg-sample.yml --stdout
+----
+
+[TIP]
+Repeat without the `--stdout` flag and you'll find the generated files in `_output/`, as defined in the configuration.
+
+// tag::configuration[]
 
 === Data Sources
 
@@ -162,10 +205,10 @@ For standard-format files that have non-standard file extensions (for example, `
 ----
 compile:
   data:
-    file: source_data_file.js
+    file: _data/source_data_file.js
     type: json
   builds:
-    - template: liquid_template.html
+    - template: _templates/liquid_template.html
       output: _output/output_file.html
 ----
 
@@ -220,11 +263,29 @@ A_B A thing that *SnASFHE&"\|+1Dsaghf true
 G_H Some text for &hdf 1t`F false
 ----
 
+[source,yaml]
+.Example -- Instructing correct type for mislabeled JSON file
+----
+compile:
+  data:
+    file: _data/sample.free
+    type: regex
+    pattern: ^(?<code>[A-Z_]+)\s(?<description>.*)\s(?<required>true|false)\n
+  builds:
+    - template: _templates/liquid_template.html
+      output: _output/output_file.html
+----
+
+Let's take a closer look at that regex pattern.
+
 .Example -- regular expression with named groups for variable generation
 [source,regex]
 ----
 ^(?<code>[A-Z_]+)\s(?<description>.*)\s(?<required>true|false)\n
 ----
+
+We see the named groups *code*, *description*, and *required*.
+This maps nicely to a new array.
 
 .Example -- array derived from sample.free using above regex pattern
 [source,ruby]
@@ -246,6 +307,8 @@ This is the case for jumbled content containing characters that require escaping
 === Templating
 
 LiquiDoc will add the powers of Asciidoctor in a future release, enabling initial reformatting of complex source data _into_ AsciiDoc format using Liquid templates, followed by final publishing into rich formats such as PDF, HTML, and even slide presentations.
+Other template engines may be added, such as ERB, HAML, Handlebars.
+Requests are welcome.
 
 link:https://help.shopify.com/themes/liquid/basics[*Liquid*] is used for parsing complex variable data, typically for iterated output.
 For instance, a data structure of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
@@ -255,7 +318,7 @@ For data sourced in CSV format or extracted through regex source parsing, all da
 Data sourced in YAML, XML, or JSON may be passed as complex structures with custom names determined in the file contents.
 
 Looping through known data formats is fairly straightforward.
-A for loop iterates through your data, item by item.
+A _for_ loop iterates through your data, item by item.
 Each item or row contains one or more key-value pairs.
 
 [[rows_asciidoc]]
@@ -277,12 +340,12 @@ The other curious marks such as `::` and `[horizontal.simple]` are AsciiDoc mark
 
 .Non-printing Markup
 ****
-In Liquid and most templating systems, any row containing a non-printing “tag” will print leave a blank line in the output after parsing.
+In Liquid and most templating systems, any row containing a non-printing “tag” will leave a blank line in the output after parsing.
 For this reason, it is advised that you stack tags horizontally when you do not wish to generate a blank line, as with the first row above.
-A non-printing tag such as `{% endfor %}` will generate a blank line that is convenient in the output but likely to cause clutter here.
+A non-printing tag such as `{% endfor %}` will generate a blank line that is inconvenient in the output.
 
-This side effect of templating is unfortunate, as it discourages elegant, “accordian-style” code nesting, as in the HTML example below (<<parsed_html>>).
-In the end, ugly Liquid templates can generate elegant markup output with exquisite precision.
+This side effect of templating is unfortunate, as it discourages elegant, “accordian-style” code nesting, like you see in the HTML example below (<<parsed_html>>).
+In the end, ugly Liquid templates can generate quite elegant markup output with exquisite precision.
 ****
 
 The above would generate the following:
@@ -378,13 +441,61 @@ G_H Some text for &hdf 1t`F false
 After this parsing, files are written in any of the given output formats, or else just written to system as STDOUT (when you add the `--stdout` flag to your command or set `output: stdout` in your config file).
 Liquid templates can be used to produce any flat-file format imaginable.
 Just format valid syntax with your source data and Liquid template, then save with the proper extension, and you're all set.
+// end::usage[]
 
-== Contributing
+== Meta
+// tag::meta[]
+I get that this is the least sexy tool anyone has ever built.
+I truly do.
 
-Contributions are open and welcome.
-This repo is maintained by Rocana's documentation manager, who taught himself basic Ruby scripting just to build LiquiDoc and related tooling.
-Instructional pull requests are encouraged!
+Except I kind of disagree.
+To me, it's one of the most elegant ideas I've ever worked on, and I actually adore it.
 
-== License
+Maybe it's due to my love of flat files.
+The simplicity of _anything in / anything out_ for flat files is such a holy grail in my mind.
+I am a huge fan of link:http://pandoc.org/[Pandoc], which has saved me countless hours of struggle.
+I totally dig markup languages and dynamic template engines, both of which I've been using to build cool shit for almost 20 years.
 
-LiquiDoc is provided by Rocana, Inc under the MIT License.
+You don't have to love it to use it, or even to contribute.
+But if you get what I'm trying to do, give a holler.
+// end::meta[]
+
+=== Contributing
+// tag::contributing[]
+Contributions are very welcome.
+
+This repo is maintained by the former Technical Documentation Manager at Rocana (formerly ScalingData, now mostly acquired by Splunk), the original copyright holder of LiquiDoc.
+I taught myself basic Ruby scripting just to code LiquiDoc and related tooling.
+Therefore, *instructional pull requests are encouraged*.
+I have no ego around the code itself.
+I know this isn't the best, most consistent Ruby scripting out there, and I confess I'm more interested in what the tool _does_ than how it does it.
+Help will be appreciated.
+
+That said, because this utility is also made to go along with my book _Codewriting_, I prefer not to overcomplicate the source code, as I want relative beginners to be able to intuitively follow and maybe even modify it.
+
+I am very eager to collaborate, and I actually have extensive experience with collective authorship, but I'm not a very social _programmer_.
+If you want to contribute to this tool, please get in touch.
+A *pull request* is a great way to reach out.
+// end::contributing[]
+
+=== Licensing
+// tag::licensing[]
+LiquiDoc link:https://github.com/scalingdata/liquidoc-gem[originated] under the copyright of Rocana, Inc, released under the MIT License.
+*This fork* is maintained by Brian Dominick, the original author.
+link:https://www.theregister.co.uk/2017/10/10/splunk_acquires_rival_rocana/[Rocana has been acquired by Splunk], but the author and driving maintainer of this tooling chose not to continue on with the rest of Rocana engineering, precisely in order to openly explore what tooling of this kind can do in various environments.
+
+I am not sure if the copyright for the prime source transferred to Splunk, but it does not matter.
+This fork repository will be actively maintained by the original author, and my old coworkers and their new employer can make make use of my upgrades like everyone else.
+
+[NOTE]
+The LiquiDoc gem at rubygems.org will be published out of this repo starting with version 0.2.0.
+
+// tag::licensing[]
+
+=== Consulting
+// tag::consulting[]
+LiquiDoc and _Codewriting_ author Brian Dominick is now available for contract work around implementation of advanced docs-as-code infrastructure.
+I am thrilled to work with engineering and support teams at software companies.
+I'm also seeking opportunities to innovate management of documentation and presentations at non-software organizations -- especially if you're working to make the world a better place!
+
+// end::consulting[]
