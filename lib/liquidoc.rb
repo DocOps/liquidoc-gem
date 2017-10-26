@@ -7,6 +7,7 @@ require 'asciidoctor'
 require 'logger'
 require 'csv'
 require 'crack/xml'
+require 'fileutils'
 
 # ===
 # Table of Contents
@@ -14,15 +15,15 @@ require 'crack/xml'
 #
 # 1. dependencies stack
 # 2. default settings
-# 3. general methods
-# 4. object classes
-# 5. action-specific methods
-# 5a. parse methods
-# 5b. migrate methods
-# 5c. render methods
-# 6. text manipulation
-# 7. command/option parser
-# 8. executive method calls
+# 3. general procs def
+# 4. object classes def
+# 5. action-specific procs def
+# 5a. parse procs def
+# 5b. migrate procs def
+# 5c. render procs def
+# 6. text manipulation modules/classes def
+# 7. command/option parser def
+# 8. executive proc calls
 
 # ===
 # Default settings
@@ -33,7 +34,6 @@ require 'crack/xml'
 @configs_dir = @base_dir + '_configs'
 @templates_dir = @base_dir + '_templates/'
 @data_dir = @base_dir + '_data/'
-@output_dir = @base_dir + '_output/'
 @attributes_file_def = '_data/asciidoctor.yml'
 @attributes_file = @attributes_file_def
 @pdf_theme_file = 'theme/pdf-theme.yml'
@@ -48,7 +48,7 @@ require 'crack/xml'
 end
 
 # ===
-# Executive methods
+# Executive procs
 # ===
 
 # Establish source, template, index, etc details for build jobs from a config file
@@ -84,7 +84,9 @@ def iterate_build cfg
         liquify(data, build.template, build.output) # perform the liquify operation
       end
     when "migrate"
-      @logger.warn "Migrate actions not yet implemented."
+      inclusive = true
+      inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
+      copy_assets(step.source, step.target, inclusive)
     when "render"
       @logger.warn "Render actions not yet implemented."
     when "deploy"
@@ -182,6 +184,18 @@ class BuildConfigStep
     return @@step['data']
   end
 
+  def source
+    return @@step['source']
+  end
+
+  def target
+    return @@step['target']
+  end
+
+  def options
+    return @@step['options']
+  end
+
   def builds
     return @@step['builds']
   end
@@ -202,15 +216,14 @@ class Build
   def initialize build, type
     @@build = build
     @@type = type
-    @@logger = Logger.new(STDOUT)
     required = []
     case type
     when "parse"
       required = ["template,output"]
-    when "render"
-      required = ["index,output"]
     when "migrate"
       required = ["source,target"]
+    when "render"
+      required = ["index,output"]
     end
     for req in required
       if (defined?(req)).nil?
@@ -229,14 +242,6 @@ class Build
 
   def index
     @@build['index']
-  end
-
-  def source
-    @@build['source']
-  end
-
-  def target
-    @@build['target']
   end
 
 end #class Build
@@ -305,9 +310,9 @@ class DataSrc
 end
 
 # ===
-# Action-specific methods
-#
-# PARSE-type build methods
+# Action-specific procs
+# ===
+# PARSE-type build procs
 # ===
 
 # Pull in a semi-structured data file, converting contents to a Ruby hash
@@ -316,7 +321,7 @@ def ingest_data datasrc
   unless datasrc.is_a? Object
     raise "InvalidDataObject"
   end
-  # This method should really begin here, once the data object is in order
+  # This proc should really begin here, once the datasrc object is in order
   case datasrc.type
   when "yml"
     begin
@@ -407,8 +412,9 @@ def liquify datasrc, template_file, output
   end
   unless output.downcase == "stdout"
     output_file = output
+    base_path = File.dirname(output)
     begin
-      Dir.mkdir(@output_dir) unless File.exists?(@output_dir)
+      Dir.mkdir(base_path) unless File.exists?(base_path)
       File.open(output_file, 'w') { |file| file.write(rendered) } # saves file
     rescue Exception => ex
       @logger.error "Failed to save output.\n#{ex.class} #{ex.message}"
@@ -424,30 +430,36 @@ def liquify datasrc, template_file, output
 end
 
 # ===
-# MIGRATE-type methods
+# MIGRATE-type procs
 # ===
 
-# Copy images and other assets into output dir for HTML operations
-def copy_assets src, dest
-  if @recursive
-    dest = "#{dest}/#{src}"
-    recursively = "Recursively c"
-  else
-    recursively = "C"
+# Copy images and other files into target dir
+def copy_assets src, dest, inclusive=true
+  if File.file?(src) # for sources that are files
+    target_dir = File.dirname(dest)
+  else # if src is a directory
+    unless inclusive then src = src + "/." end
+    target_dir = dest
   end
-  @logger.debug "#{recursively}opying image assets to #{dest}"
+  @logger.debug "Copying #{src} to #{dest}"
+  # puts "Dir name: " + File.dirname(dest)
+  # puts "Dir exists: " + File.exists?(File.dirname(dest)).to_s
   begin
-    FileUtils.mkdir_p(dest) unless File.exists?(dest)
-    FileUtils.cp_r(src, dest)
+    FileUtils.mkdir_p(dest) unless File.exists?(target_dir)
+    if File.directory?(src)
+      FileUtils.cp_r(src, dest)
+    else
+      FileUtils.cp(src, dest)
+    end
+    @logger.info "Copied assets."
   rescue Exception => ex
     @logger.warn "Problem while copying assets. #{ex.message}"
-    return
+    raise
   end
-  @logger.debug "\s\s#{recursively}opied: #{src} --> #{dest}/#{src}"
 end
 
 # ===
-# RENDER-type methods
+# RENDER-type procs
 # ===
 
 # Gather attributes from a fixed attributes file
