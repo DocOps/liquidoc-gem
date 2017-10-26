@@ -1,0 +1,10 @@
+- slug: attributes-file
+  description: For passing in a standard YAML AsciiDoc attributes file.
+  default: _data/attributes.yml
+  flag: a
+- slug: attr
+  description: "For passing an AsciiDoc attribute parameter to Asciidoctor. Ex: --attr basedir=some/path --attr imagesdir=some/path/images"
+- slug: base
+  description:
+  default: ./
+  flag: b
