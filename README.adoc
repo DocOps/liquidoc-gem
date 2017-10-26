@@ -186,13 +186,17 @@ Repeat without the `--stdout` flag and you'll find the generated files in `_outp
 
 // tag::configuration[]
 
-=== Data Sources
+=== Parse Operations
+
+The primary type of action performed by LiquiDoc during a build step is parsing semi-structured data into any flat format desired.
+
+==== Data Sources
 
 Valid data sources come in a few different types.
 There are the built-in data types (YAML, JSON, XML, CSV) vs free-form type (files processed using regular expressions, designated by the `regex` data type).
 There is also a divide between simple one-record-per-line data types (CSV and regex), which produce one set of parameters for every line in the source file, versus nested data types that can reflect far more complex structures.
 
-==== Native Nested Data (YAML, JSON, XML)
+===== Native Nested Data (YAML, JSON, XML)
 
 The native nested formats are actually the most straightforward.
 So long as your filename has a conventional extension, you can just pass a file path for this setting.
@@ -203,7 +207,7 @@ For standard-format files that have non-standard file extensions (for example, `
 [source,yaml]
 .Example -- Instructing correct type for mislabeled JSON file
 ----
-compile:
+- action: parse
   data:
     file: _data/source_data_file.js
     type: json
@@ -214,7 +218,7 @@ compile:
 
 Once LiquiDoc knows the right file type, it will parse the file into a Ruby hash data structure for further processing.
 
-==== CSV Data
+===== CSV Data
 
 Data ingested from CSV files will use the first row as key names for columnar data in the subsequent rows, as shown below.
 
@@ -244,7 +248,7 @@ data[1].default #=> 300
 data[1].required #=> false
 ----
 
-==== Free-form Data
+===== Free-form Data
 
 Free-form data can only be parsed using regex patterns -- otherwise LiquiDoc has no idea what to consider data and what to consider noise.
 
@@ -266,7 +270,7 @@ G_H Some text for &hdf 1t`F false
 [source,yaml]
 .Example -- Instructing correct type for mislabeled JSON file
 ----
-compile:
+- action: parse
   data:
     file: _data/sample.free
     type: regex
@@ -304,7 +308,7 @@ Its use case is usually when you simply cannot control the form your source take
 The regex type is also handy when the content of some fields would be burdensome to store in conventional semi-structured formats like those natively parsed by LiquiDoc.
 This is the case for jumbled content containing characters that require escaping, so you can keep source like that from the example above in the simplest possible form.
 
-=== Templating
+==== Templating
 
 LiquiDoc will add the powers of Asciidoctor in a future release, enabling initial reformatting of complex source data _into_ AsciiDoc format using Liquid templates, followed by final publishing into rich formats such as PDF, HTML, and even slide presentations.
 Other template engines may be added, such as ERB, HAML, Handlebars.
@@ -436,12 +440,43 @@ A_B A thing that *SnASFHE&"\|+1Dsaghf true
 G_H Some text for &hdf 1t`F false
 ----
 
-=== Output
+==== Output
 
 After this parsing, files are written in any of the given output formats, or else just written to system as STDOUT (when you add the `--stdout` flag to your command or set `output: stdout` in your config file).
 Liquid templates can be used to produce any flat-file format imaginable.
 Just format valid syntax with your source data and Liquid template, then save with the proper extension, and you're all set.
 // end::usage[]
+
+=== Migrate Operations
+
+During the build process, different tools handle file assets variously, so your images and other embedded files are not always where they need to be relative to the current procedure.
+Migrate actions copy resource files to a temporary/uncommitted directory during the build procedure so they can be readily accessed by subsequent steps.
+
+In addition to designating `action: migrate`, migrate operations require just a few simple settings.
+
+[source,yaml]
+.Example -- Instructing file copies with 'migrate' action
+----
+- action: migrate
+  source: assets/images
+  target: _build/img
+  options:
+    inclusive: false
+- action: migrate
+  source: index-map.adoc
+  target: _build/index-map.adoc
+----
+
+The first action step above copies all the files in `assets/images` and copies them to `_build/img`.
+It will only recreate the contents of the source directory, not the directory path itself, because the *inclusive* option is set to `false` (though its default is `true`).
+When the both the source and target paths are directories and inclusive is `true`, the files are copied to `<target>/<source>`.
+When inclusive is `false`, they copy to `<target>/`.
+
+Individual files must be listed individually at this time, one per step, as in the second step.
+
+// === Render Operations
+
+// === Deploy Operations
 
 == Meta
 // tag::meta[]
@@ -464,7 +499,7 @@ But if you get what I'm trying to do, give a holler.
 // tag::contributing[]
 Contributions are very welcome.
 
-This repo is maintained by the former Technical Documentation Manager at Rocana (formerly ScalingData, now mostly acquired by Splunk), the original copyright holder of LiquiDoc.
+This repo is maintained by the former Technical Documentation Manager at Rocana (formerly ScalingData, now mostly acquired by Splunk),which is the original copyright holder of LiquiDoc.
 I taught myself basic Ruby scripting just to code LiquiDoc and related tooling.
 Therefore, *instructional pull requests are encouraged*.
 I have no ego around the code itself.
