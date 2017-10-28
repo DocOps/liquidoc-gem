@@ -4,6 +4,7 @@ require 'json'
 require 'optparse'
 require 'liquid'
 require 'asciidoctor'
+require 'asciidoctor-pdf'
 require 'logger'
 require 'csv'
 require 'crack/xml'
@@ -40,6 +41,8 @@ require 'fileutils'
 @fonts_dir = 'theme/fonts/'
 @output_filename = 'index'
 @attributes = {}
+@passed_attrs = {}
+@verbose = false
 
 @logger = Logger.new(STDOUT)
 @logger.level = Logger::INFO
@@ -88,7 +91,19 @@ def iterate_build cfg
       inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
       copy_assets(step.source, step.target, inclusive)
     when "render"
-      @logger.warn "Render actions not yet implemented."
+      if defined?(step.data)
+        attrs = ingest_attributes(step.data)
+      else
+        attrs = {}
+      end
+      validate_file_input(step.source, "source")
+      doc = AsciiDocument.new(step.source)
+      doc.add_attrs!(attrs)
+      builds = step.builds
+      for bld in builds
+        build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
+        asciidocify(doc, build) # perform the liquify operation
+      end
     when "deploy"
       @logger.warn "Deploy actions not yet implemented."
     else
@@ -169,11 +184,10 @@ class BuildConfigStep
 
   def initialize step
     @@step = step
-    @@logger = Logger.new(STDOUT)
     if (defined?(@@step['action'])).nil?
-      @logger.error "Every step in the configuration file needs an 'action' type declared."
       raise "ConfigStructError"
     end
+    validate()
   end
 
   def type
@@ -200,7 +214,15 @@ class BuildConfigStep
     return @@step['builds']
   end
 
-  def self.validate reqs
+  def validate
+    case self.type
+    when "parse"
+      reqs = ["data,builds"]
+    when "migrate"
+      reqs = ["source,target"]
+    when "render"
+      reqs = ["source,builds"]
+    end
     for req in reqs
       if (defined?(@@step[req])).nil?
         @@logger.error "Every #{@@step['action']}-type in the configuration file needs a '#{req}' declaration."
@@ -216,20 +238,6 @@ class Build
   def initialize build, type
     @@build = build
     @@type = type
-    required = []
-    case type
-    when "parse"
-      required = ["template,output"]
-    when "migrate"
-      required = ["source,target"]
-    when "render"
-      required = ["index,output"]
-    end
-    for req in required
-      if (defined?(req)).nil?
-        raise ActionSettingMissing
-      end
-    end
   end
 
   def template
@@ -240,8 +248,35 @@ class Build
     @@build['output']
   end
 
-  def index
-    @@build['index']
+  def style
+    @@build['style']
+  end
+
+  def doctype
+    @@build['doctype']
+  end
+
+  def backend
+    @@build['backend']
+  end
+
+  def attributes
+    @@build['attributes']
+  end
+
+  def validate
+    reqs = []
+    case self.type
+    when "parse"
+      reqs = ["template,output"]
+    when "render"
+      reqs = ["output"]
+    end
+    for req in required
+      if (defined?(req)).nil?
+        raise "ActionSettingMissing"
+      end
+    end
   end
 
 end #class Build
@@ -306,6 +341,37 @@ class DataSrc
 
   def pattern
     @@datasrc['pattern']
+  end
+end
+
+class AsciiDocument
+  def initialize map, type='article'
+    @@index = map
+    @@attributes = {}
+    @@type = type
+  end
+
+  def index
+    @@index
+  end
+
+  def add_attrs! attrs
+    raise "InvalidAttributesFormat" unless attrs.is_a?(Hash)
+    self.attributes.merge!attrs
+  end
+
+  def attributes
+    @@attributes
+  end
+
+  def type
+    @@type
+  end
+end
+
+class AsciiDoctorConfig
+  def initialize  out, type, back
+
   end
 end
 
@@ -451,7 +517,7 @@ def copy_assets src, dest, inclusive=true
     else
       FileUtils.cp(src, dest)
     end
-    @logger.info "Copied assets."
+    @logger.info "Copied #{src} to #{dest}."
   rescue Exception => ex
     @logger.warn "Problem while copying assets. #{ex.message}"
     raise
@@ -464,10 +530,7 @@ end
 
 # Gather attributes from a fixed attributes file
 # Use _data/attributes.yml or designate as -a path/to/filename.yml
-def get_attributes attributes_file
-  if attributes_file == nil
-    attributes_file = @attributes_file_def
-  end
+def ingest_attributes attributes_file
   validate_file_input(attributes_file, "attributes")
   begin
     attributes = YAML.load_file(attributes_file)
@@ -477,20 +540,44 @@ def get_attributes attributes_file
   end
 end
 
-# Set attributes for direct Asciidoctor operations
-def set_attributes attributes
-  unless attributes.is_a?(Enumerable)
-    attributes = { }
+def derive_backend type, out_file
+  case File.extname(out_file)
+  when ".pdf"
+    backend = "pdf"
+  else
+    backend = "html5"
   end
-  attributes["basedir"] = @base_path
-  attributes.merge!get_attributes(@attributes_file)
-  attributes = '-a ' + attributes.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
-  return attributes
+  return backend
 end
 
-# To be replaced with a gem call
-def publish pub, bld
-  @logger.warn "Publish actions not yet implemented."
+def asciidocify doc, build
+  @logger.debug "Executing Asciidoctor render operation for #{build.output}."
+  to_file = build.output
+  back = derive_backend(doc.type, build.output)
+  if back == "pdf" # pass optional style file and set a default pdf-fontsdir
+    unless defined?(build.style).nil?
+      doc.add_attrs!({"pdf-style"=>build.style})
+    end
+  end
+  # Add attributes from config file build section
+  doc.add_attrs!(build.attributes.to_h)
+  # Add attributes from command-line -a args
+  doc.add_attrs!(@passed_attrs)
+  @logger.debug "Final pre-parse attributes: #{doc.attributes}"
+  # Perform the aciidoctor convert
+  Asciidoctor.convert_file(
+    doc.index,
+    to_file: to_file,
+    attributes: doc.attributes,
+    require: "pdf",
+    backend: back,
+    doctype: build.doctype,
+    safe: "server",
+    sourcemap: true,
+    verbose: @verbose,
+    mkdirs: true
+  )
+  @logger.info "Rendered file #{to_file}."
 end
 
 # ===
@@ -582,12 +669,11 @@ Liquid::Template.register_filter(CustomFilters)
 command_parser = OptionParser.new do|opts|
   opts.banner = "Usage: liquidoc [options]"
 
-  opts.on("-a PATH", "--attributes-file=PATH", "For passing in a standard YAML AsciiDoc attributes file. Default: #{@attributes_file_def}") do |n|
-    @assets_path = n
-  end
-
-  opts.on("--attr=STRING", "For passing an AsciiDoc attribute parameter to Asciidoctor. Ex: --attr basedir=some/path --attr imagesdir=some/path/images") do |n|
-    @passed_attrs = @passed_attrs.merge!n
+  opts.on("-a KEY=VALUE", "For passing an AsciiDoc attribute parameter to Asciidoctor. Ex: -a basedir=some/path -a custom_var='my value'") do |n|
+    pair = {}
+    k,v = n.split('=')
+      pair[k] = v
+    @passed_attrs.merge!pair
   end
 
   # Global Options
@@ -621,6 +707,7 @@ command_parser = OptionParser.new do|opts|
 
   opts.on("--verbose", "Run verbose") do |n|
     @logger.level = Logger::DEBUG
+    @verbose = true
   end
 
   opts.on("--stdout", "Puts the output in STDOUT instead of writing to a file.") do
@@ -639,7 +726,6 @@ command_parser.parse!
 # Upfront debug output
 @logger.debug "Base dir: #{@base_dir}"
 @logger.debug "Config file: #{@config_file}"
-@logger.debug "Index file: #{@index_file}"
 
 # ===
 # Execute

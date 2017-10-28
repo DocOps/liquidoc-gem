@@ -117,7 +117,7 @@ This not only makes the command line much easier to manage (requiring just a con
 Here is the basic structure of a valid config file:
 
 [source,yaml]
-.LiquiDoc config file for recognized format parsing
+.Example config file for recognized format parsing
 ----
 - action: parse # <1>
   data: source_data_file.json # <2>
@@ -147,7 +147,7 @@ Can also be `stdout`.
 .Advanced Data Ingest
 ****
 [source,yaml]
-.LiquiDoc config file for unrecognized format parsing
+.Example config file for unrecognized format parsing
 ----
 - action: parse
   data: # <1>
@@ -205,7 +205,7 @@ That is, if your file ends in `.yml`, `.json`, or `.xml`, and your data is prope
 For standard-format files that have non-standard file extensions (for example, `.js` rather than `.json` for a JSON file), you must declare a type explicitly.
 
 [source,yaml]
-.Example -- Instructing correct type for mislabeled JSON file
+.Example config -- Instructing correct type for mislabeled JSON file
 ----
 - action: parse
   data:
@@ -268,7 +268,7 @@ G_H Some text for &hdf 1t`F false
 ----
 
 [source,yaml]
-.Example -- Instructing correct type for mislabeled JSON file
+.Example config -- Instructing correct type for mislabeled JSON file
 ----
 - action: parse
   data:
@@ -455,7 +455,7 @@ Migrate actions copy resource files to a temporary/uncommitted directory during 
 In addition to designating `action: migrate`, migrate operations require just a few simple settings.
 
 [source,yaml]
-.Example -- Instructing file copies with 'migrate' action
+.Example config -- Instructing file copies with 'migrate' action
 ----
 - action: migrate
   source: assets/images
@@ -467,16 +467,284 @@ In addition to designating `action: migrate`, migrate operations require just a 
   target: _build/index-map.adoc
 ----
 
-The first action step above copies all the files in `assets/images` and copies them to `_build/img`.
+The first action step above copies all the files and folders in `assets/images` and adds them to `_build/img`.
 It will only recreate the contents of the source directory, not the directory path itself, because the *inclusive* option is set to `false` (though its default is `true`).
-When the both the source and target paths are directories and inclusive is `true`, the files are copied to `<target>/<source>`.
-When inclusive is `false`, they copy to `<target>/`.
+When both the source and target paths are directories and inclusive is `true`, the files are copied to `target/source/`.
+When inclusive is `false`, they copy to `target/`.
 
-Individual files must be listed individually at this time, one per step, as in the second step.
+Individual files must be listed in individual steps at this time, one per step, as in the second step.
 
-// === Render Operations
+=== Render Operations
+
+Presently, all render actions convert AsciiDoc-formatted source files into rich-text documents, such as PDFs and HTML pages.
+LiquiDoc uses Asciidoctor's Ruby engine and various other plugins to generate output in a few supported formats.
+
+First let's look at a render action configuration step.
+
+[source,yaml]
+.Example config -- Instructing Asciidoctor conversions with 'render' action
+----
+- action: render
+  source: book-index.adoc
+  data: _config/asciidoctor.yml
+  builds:
+    - output: _build/publish/codewriting-book-draft.pdf
+      theme: theme/pdf-theme.yml
+    - output: _build/publish/codewriting-book-draft.html
+      theme: theme/site.css
+    - output: _build/publish/codewriting-book-draft.epub
+----
+
+Each render action requires an index, which is the primary AsciiDoc file to process labeled *source* in our configuration.
+This file can contain all of your AsciiDoc content, if you wish.
+Alternatively, it can be made up entirely of `include::` macros, creating an linear map of your document's contents, which may themselves be more AsciiDoc files, code examples, and so forth.
+
+[[_fig_index_file]]
+[source,asciidoc]
+.Example AsciiDoc index file
+----
+= This File Can Contain Regular AsciiDoc Markup
+
+\include::chapter-01.adoc[]
+
+\include::code-sample.rb[tags="booksample"]
+
+\include::code-sample.js[lines="22..33"]
+----
+
+After the title line, the first macro instruction in this example will embed the entire file `chapter-01.adoc`, parsing and rendering its AsciiDoc-formatted contents in the process.
+
+The second instruction extracts part of the file `code-sample.rb` and embeds it here.
+Inside `codesample.rb`, content is tagged with comment code to mark what we wish to extract.
+In the case of a Ruby file, you would expect to find code like the following in the source.
+
+[source,ruby]
+.Example Ruby code snippet tagged for inclusion
+----
+# tag::booksample[]
+def exampleblock
+  puts "This is an example for my book."
+end
+# end::booksample[]
+----
+
+For AsciiDoc source code, you would use the `//` comment notation.
+
+[source,asciidoc]
+.Example AsciiDoc code snippet tagged for inclusion
+----
+// tag::booksample[]
+purpose::
+to demonstrate inclusion.
+// end::booksample[]
+----
+
+The third instruction in our <<_fig_index_file>>, which was simply include::code-sample.js[lines="22..33"] -- this dangerous little bugger extracts a fixed span of code lines, as designated.
+
+[[asciidoc-attributes]]
+==== Setting Attributes
+
+For `render` actions, the *source* file and other `.adoc` files determine most of the rest of the content source files.
+But Asciidoctor renderings can be configured and manipulated by globals _attribute_ settings.
+Furthermore, inline substitutions can be made out of data living outside the source tree of one particular document, passed into the document build in the form of -- you guessed it -- AsciiDoc _attributes_.
+
+LiquiDoc provides several means for adding attributes to your documents, in addition to the ways you might be used to setting attributs.
+They are listed below in order of precedence -- an identical value set explicitly in each subsequent place will overwrite any set in the previous stages.
+
+Inline AsciiDoc::
+The most common way to set variables is inside your AsciiDoc source -- typically at the top of your `index.adoc` file or the equivalent.
+Any parameters set there will cascade through your files for parsing.
+This is good place to establish defaults, which can be overwritten by the other three means of setting AsciiDoc attributes.
++
+[source,asciidoc]
+.Example -- Setting AsciiDoc attributes inline
+----
+:some_var: My value
+:imagesdir: ./img
+----
+
+Data File::
+A YAML-formatted data file containing a stack of key-value pairs can be passed to Asciidoctor.
++
+[source,yaml]
+.Example AsciiDoc attributes file
+----
+imagesdir: assets/images
+basedir: _build
+my_custom_var: Some text, can include spaces and most punctuation
+----
++
+This file must be called out in your configuration using the top-level *data* setting.
++
+[source,yaml]
+.Example AsciiDoc data file setting for attributes ingest
+----
+- action: render
+  source: my_index.adoc
+  data: _data/asciidoctor-attributes.yml
+  builds:
+    - output: myfile.html
+----
++
+This method is advised for global settings across a particular _document_.
+It will eventually be made dynamic, so that dependent variables can emerge from previous settings within the file, similarly to how the Asciidoctor PDF theme file works with so-called link:https://github.com/asciidoctor/asciidoctor-pdf/blob/master/docs/theming-guide.adoc#keys["nested keys"].
+
+Config File::
+You can set or override document-level attributes _per build_ of any given document.
+So if your _document_ is a book, and your _builds_ are an HTML edition and a PDF edition, you can pass distinct settings to each.
++
+[source,yaml]
+.Example per-build attribute settings in config file
+----
+  - action: render
+    source: my_book.adoc
+    data: _data/asciidoctor-attributes.yml
+    builds:
+      - output: my_book.html
+        attributes:
+          edition: HTML
+      - output: my_book.pdf
+        attributes:
+          edition: PDF
+      - output: my_book_special.pdf
+        attributes:
+          edition: Special
+----
++
+Imagine this affecting content in the book file.
++
+[source,asciidoc]
+.Example book index with variable content
+----
+= My Awesome Book: {edition} Edition
+
+\include::chapter-1.adoc[]
+
+\include::chapter-2.adoc[]
+\\ ifeval::[{edition} == "Special"]
+\include::chapter-3.adoc[]
+\\ endif::[]
+----
++
+The AsciiDoc code above that might be least familiar to you is conditional code.
+Here we see how passing attributes at the _build iteration_ level gives us all kinds of cool powers.
+Not only are we setting the subtitle with a variable; if we're building the special edition, we add a chapter the other two editions ignore.
+
+command-line arguments::
+There is yet a way to override all of this, which is also handy for testing variables out without editing any files:
+pass arguments via the `-a` command-line argument.
+The `-a` option flag accepts a string in the format of `key=value`, where `key` is the name of your attribute, and `value` is your assignment for that attribute.
+You may pass as many attributes as you like this way, up to the capacity of your shell's command line, which is probably something.
++
+[source,bash]
+.Example -- Setting global build attributes on the CLI
+----
+bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW' -a testvar=working
+----
+
+==== Render Build Settings
+
+Certain AsciiDoc settings are determinant enough that they can be set using parameters in the build config.
+Establishing these as per-build settings in your config file file will override anywhere else they are set, except on the command line.
+
+output::
+The filename for saving rendered content.
+This build setting is required for render operations.
+
+doctype::
+Overrides *doctype* attribute.
+Valid values are:
+
+`book`:::
+Generates a book-formatted document in PDF, HTML, or ePub.
+
+`article`:::
+Generates an article-formatted document in PDF, HTML, or ePub.
+
+`manpage`:::
+Generates Linux man page format.
+
+`slideshow`:::
+Generates an HTML/JavaScript slide deck. (Not yet implemented.)
 
 // === Deploy Operations
+
+=== Config Settings Matrix
+
+Here is a table of all the established configuration settings, as they pertain to each key LiquiDoc action.
+
+[cols="3,1,1,1,1",options="header"]
+|===
+| Setting
+| Parse
+| Migrate
+| Render
+| Deploy
+
+5+s| Main Per-step Settings
+
+s| action
+| Required
+| Required
+| Required
+|
+
+s| data
+| Required
+| N/A
+| Optional
+|
+
+s| source
+| N/A
+| Required
+| Required
+|
+
+s| target
+| N/A
+| Required
+| N/A
+|
+
+s| options
+| N/A
+| Optional
+| Optional
+|
+
+s| builds
+| Required
+| N/A
+| Required
+|
+
+5+s| Per-Build Settings
+
+s| output
+| Required
+| N/A
+| Required
+|
+
+s| template
+| Required
+| N/A
+| N/A
+|
+
+s| style
+| N/A
+| N/A
+| Optional
+|
+
+s| attributes
+| N/A
+| N/A
+| Optional
+|
+|===
 
 == Meta
 // tag::meta[]
@@ -500,17 +768,18 @@ But if you get what I'm trying to do, give a holler.
 Contributions are very welcome.
 
 This repo is maintained by the former Technical Documentation Manager at Rocana (formerly ScalingData, now mostly acquired by Splunk),which is the original copyright holder of LiquiDoc.
-I taught myself basic Ruby scripting just to code LiquiDoc and related tooling.
+I am teaching myself basic Ruby scripting just to code LiquiDoc and related tooling.
 Therefore, *instructional pull requests are encouraged*.
 I have no ego around the code itself.
 I know this isn't the best, most consistent Ruby scripting out there, and I confess I'm more interested in what the tool _does_ than how it does it.
 Help will be appreciated.
 
-That said, because this utility is also made to go along with my book _Codewriting_, I prefer not to overcomplicate the source code, as I want relative beginners to be able to intuitively follow and maybe even modify it.
+That said, because this utility is also made to go along with my book _Codewriting_, *I prefer not to overcomplicate the source code*, as I want relative beginners to be able to intuitively follow and maybe even modify it.
+I guess by that I mean, I'm resisting over-abstracting the source -- I must be the beginner I have in mind.
 
-I am very eager to collaborate, and I actually have extensive experience with collective authorship, but I'm not a very social _programmer_.
+I am very eager to collaborate, and I actually have extensive experience with collective authorship and product design, but I'm not a very social _programmer_.
 If you want to contribute to this tool, please get in touch.
-A *pull request* is a great way to reach out.
+A *merge request* is a great way to reach out.
 // end::contributing[]
 
 === Licensing
