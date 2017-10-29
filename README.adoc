@@ -667,6 +667,9 @@ Generates Linux man page format.
 `slideshow`:::
 Generates an HTML/JavaScript slide deck. (Not yet implemented.)
 
+`style`::
+Points either to a YAML configuration for PDF styles or a CSS stylesheet for HTML rendering.
+
 // === Deploy Operations
 
 === Config Settings Matrix

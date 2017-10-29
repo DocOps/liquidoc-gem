@@ -554,9 +554,12 @@ def asciidocify doc, build
   @logger.debug "Executing Asciidoctor render operation for #{build.output}."
   to_file = build.output
   back = derive_backend(doc.type, build.output)
-  if back == "pdf" # pass optional style file and set a default pdf-fontsdir
-    unless defined?(build.style).nil?
+  if defined?(build.style).nil?
+    case back
+    when "pdf"
       doc.add_attrs!({"pdf-style"=>build.style})
+    when "html5"
+      doc.add_attrs!({"stylesheet"=>build.style})
     end
   end
   # Add attributes from config file build section
