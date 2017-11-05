@@ -509,7 +509,7 @@ def copy_assets src, dest, inclusive=true
   end
   @logger.debug "Copying #{src} to #{dest}"
   begin
-    FileUtils.mkdir_p(target_dir) unless Dir.exists?(File.dirname(target_dir)).to_s
+    FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
     if File.directory?(src)
       FileUtils.cp_r(src, dest)
     else
