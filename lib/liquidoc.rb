@@ -568,18 +568,25 @@ def asciidocify doc, build
   doc.add_attrs!(@passed_attrs)
   @logger.debug "Final pre-parse attributes: #{doc.attributes}"
   # Perform the aciidoctor convert
-  Asciidoctor.convert_file(
-    doc.index,
-    to_file: to_file,
-    attributes: doc.attributes,
-    require: "pdf",
-    backend: back,
-    doctype: build.doctype,
-    safe: "server",
-    sourcemap: true,
-    verbose: @verbose,
-    mkdirs: true
-  )
+  unless back == "pdf"
+    Asciidoctor.convert_file(
+      doc.index,
+      to_file: to_file,
+      attributes: doc.attributes,
+      require: "pdf",
+      backend: back,
+      doctype: build.doctype,
+      safe: "unsafe",
+      sourcemap: true,
+      verbose: @verbose,
+      mkdirs: true
+    )
+  else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency does not seem to perform the same way
+    attributes = '-a ' + doc.attributes.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
+    command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attributes} -a no-header-footer --trace #{doc.index}"
+    @logger.debug "Running #{command}"
+    system command
+  end
   @logger.info "Rendered file #{to_file}."
 end
 
