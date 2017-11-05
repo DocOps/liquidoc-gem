@@ -508,10 +508,8 @@ def copy_assets src, dest, inclusive=true
     target_dir = dest
   end
   @logger.debug "Copying #{src} to #{dest}"
-  # puts "Dir name: " + File.dirname(dest)
-  # puts "Dir exists: " + File.exists?(File.dirname(dest)).to_s
   begin
-    FileUtils.mkdir_p(dest) unless File.exists?(target_dir)
+    FileUtils.mkdir_p(target_dir) unless Dir.exists?(File.dirname(target_dir)).to_s
     if File.directory?(src)
       FileUtils.cp_r(src, dest)
     else
@@ -554,12 +552,14 @@ def asciidocify doc, build
   @logger.debug "Executing Asciidoctor render operation for #{build.output}."
   to_file = build.output
   back = derive_backend(doc.type, build.output)
-  if defined?(build.style).nil?
+  unless build.style.nil?
     case back
     when "pdf"
       doc.add_attrs!({"pdf-style"=>build.style})
     when "html5"
       doc.add_attrs!({"stylesheet"=>build.style})
+    else
+      raise "UnrecognizedBackend"
     end
   end
   # Add attributes from config file build section
@@ -662,7 +662,6 @@ module CustomFilters
   def parameterize!(sep = '_')
     replace(self.parameterize(sep))
   end
-
 end
 
 # register custom Liquid filters
