@@ -267,7 +267,6 @@ class Build
 
   def set key, val
     @build[key] = val
-    puts "#{key} => #{@build[key]}"
   end
 
   def validate
@@ -486,15 +485,17 @@ def liquify datasrc, template_file, output
     output_file = output
     base_path = File.dirname(output)
     begin
-      Dir.mkdir(base_path) unless File.exists?(base_path)
+      FileUtils::mkdir_p(base_path) unless File.exists?(base_path)
       File.open(output_file, 'w') { |file| file.write(rendered) } # saves file
     rescue Exception => ex
       @logger.error "Failed to save output.\n#{ex.class} #{ex.message}"
+      raise "FileNotBuilt"
     end
     if File.exists?(output_file)
       @logger.info "File built: #{File.basename(output_file)}"
     else
       @logger.error "Hrmp! File not built."
+      raise "FileNotBuilt"
     end
   else # if stdout
     puts "========\nOUTPUT: Rendered with template #{template_file}:\n\n#{rendered}\n"
@@ -558,13 +559,10 @@ def asciidocify doc, build
   @logger.debug "Executing Asciidoctor render operation for #{build.output}."
   to_file = build.output
   unless doc.type == build.doctype
-    puts "performing..."
     if build.doctype.nil?
       build.set("doctype", doc.type)
     end
   end
-  puts "document doctype: #{doc.type}"
-  puts "build doctype: #{build.doctype}"
   back = derive_backend(doc.type, build.output)
   unless build.style.nil?
     case back
