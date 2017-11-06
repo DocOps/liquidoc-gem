@@ -91,7 +91,8 @@ def iterate_build cfg
       inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
       copy_assets(step.source, step.target, inclusive)
     when "render"
-      if defined?(step.data)
+      if defined?(step.data) # if we're passing attributes as a YAML file, let's ingest that up front
+        validate_file_input(step.data, "data")
         attrs = ingest_attributes(step.data)
       else
         attrs = {}
