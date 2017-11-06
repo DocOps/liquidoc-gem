@@ -163,11 +163,11 @@ class BuildConfig
       raise "ConfigStructError"
     end
 
-    @@cfg = config
+    @cfg = config
   end
 
   def steps
-    @@cfg
+    @cfg
   end
 
   def deprecated_format config # for backward compatibility with 0.1.0 and 0.2.0
@@ -184,35 +184,35 @@ end #class BuildConfig
 class BuildConfigStep
 
   def initialize step
-    @@step = step
-    if (defined?(@@step['action'])).nil?
+    @step = step
+    if (defined?(@step['action'])).nil?
       raise "ConfigStructError"
     end
     validate()
   end
 
   def type
-    return @@step['action']
+    return @step['action']
   end
 
   def data
-    return @@step['data']
+    return @step['data']
   end
 
   def source
-    return @@step['source']
+    return @step['source']
   end
 
   def target
-    return @@step['target']
+    return @step['target']
   end
 
   def options
-    return @@step['options']
+    return @step['options']
   end
 
   def builds
-    return @@step['builds']
+    return @step['builds']
   end
 
   def validate
@@ -225,8 +225,8 @@ class BuildConfigStep
       reqs = ["source,builds"]
     end
     for req in reqs
-      if (defined?(@@step[req])).nil?
-        @@logger.error "Every #{@@step['action']}-type in the configuration file needs a '#{req}' declaration."
+      if (defined?(@step[req])).nil?
+        @logger.error "Every #{@step['action']}-type in the configuration file needs a '#{req}' declaration."
         raise "ConfigStructError"
       end
     end
@@ -237,28 +237,28 @@ end #class Action
 class Build
 
   def initialize build, type
-    @@build = build
-    @@type = type
+    @build = build
+    @type = type
   end
 
   def template
-    @@build['template']
+    @build['template']
   end
 
   def output
-    @@build['output']
+    @build['output']
   end
 
   def style
-    @@build['style']
+    @build['style']
   end
 
   def doctype
-    @@build['doctype']
+    @build['doctype']
   end
 
   def backend
-    @@build['backend']
+    @build['backend']
   end
 
   def attributes
@@ -285,25 +285,25 @@ end #class Build
 class DataSrc
   # initialization means establishing a proper hash for the 'data' param
   def initialize datasrc
-    @@datasrc = {}
+    @datasrc = {}
     if datasrc.is_a? String # create a hash out of the filename
       begin
-        @@datasrc['file'] = datasrc
-        @@datasrc['ext'] = File.extname(datasrc)
-        @@datasrc['type'] = false
-        @@datasrc['pattern'] = false
+        @datasrc['file'] = datasrc
+        @datasrc['ext'] = File.extname(datasrc)
+        @datasrc['type'] = false
+        @datasrc['pattern'] = false
       rescue
         raise "InvalidDataFilename"
       end
     else
       if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
-        @@datasrc['file'] = datasrc['file']
-        @@datasrc['ext'] = File.extname(datasrc['file'])
+        @datasrc['file'] = datasrc['file']
+        @datasrc['ext'] = File.extname(datasrc['file'])
         if (defined?(datasrc['pattern']))
-          @@datasrc['pattern'] = datasrc['pattern']
+          @datasrc['pattern'] = datasrc['pattern']
         end
         if (defined?(datasrc['type']))
-          @@datasrc['type'] = datasrc['type']
+          @datasrc['type'] = datasrc['type']
         end
       else # datasrc is neither String nor Hash
         raise "InvalidDataSource"
@@ -312,25 +312,25 @@ class DataSrc
   end
 
   def file
-    @@datasrc['file']
+    @datasrc['file']
   end
 
   def ext
-    @@datasrc['ext']
+    @datasrc['ext']
   end
 
   def type
-    if @@datasrc['type'] # if we're carrying a 'type' setting for data, pass it along
-      datatype = @@datasrc['type']
+    if @datasrc['type'] # if we're carrying a 'type' setting for data, pass it along
+      datatype = @datasrc['type']
       if datatype.downcase == "yaml" # This is an expected common error, so let's do the user a solid
         datatype = "yml"
       end
     else # If there's no 'type' defined, extract it from the filename and validate it
-      unless @@datasrc['ext'].downcase.match(/\.yml|\.json|\.xml|\.csv/)
+      unless @datasrc['ext'].downcase.match(/\.yml|\.json|\.xml|\.csv/)
         # @logger.error "Data file extension must be one of: .yml, .json, .xml, or .csv or else declared in config file."
         raise "FileExtensionUnknown"
       end
-      datatype = @@datasrc['ext']
+      datatype = @datasrc['ext']
       datatype = datatype[1..-1] # removes leading dot char
     end
     unless datatype.downcase.match(/yml|json|xml|csv|regex/) # 'type' must be one of these permitted vals
@@ -341,19 +341,19 @@ class DataSrc
   end
 
   def pattern
-    @@datasrc['pattern']
+    @datasrc['pattern']
   end
 end
 
 class AsciiDocument
   def initialize map, type='article'
-    @@index = map
-    @@attributes = {}
-    @@type = type
+    @index = map
+    @attributes = {}
+    @type = type
   end
 
   def index
-    @@index
+    @index
   end
 
   def add_attrs! attrs
@@ -362,11 +362,11 @@ class AsciiDocument
   end
 
   def attributes
-    @@attributes
+    @attributes
   end
 
   def type
-    @@type
+    @type
   end
 end
 
