@@ -262,7 +262,12 @@ class Build
   end
 
   def attributes
-    @@build['attributes']
+    @build['attributes']
+  end
+
+  def set key, val
+    @build[key] = val
+    puts "#{key} => #{@build[key]}"
   end
 
   def validate
@@ -552,6 +557,14 @@ end
 def asciidocify doc, build
   @logger.debug "Executing Asciidoctor render operation for #{build.output}."
   to_file = build.output
+  unless doc.type == build.doctype
+    puts "performing..."
+    if build.doctype.nil?
+      build.set("doctype", doc.type)
+    end
+  end
+  puts "document doctype: #{doc.type}"
+  puts "build doctype: #{build.doctype}"
   back = derive_backend(doc.type, build.output)
   unless build.style.nil?
     case back
