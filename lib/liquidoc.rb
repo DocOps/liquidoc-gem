@@ -91,7 +91,8 @@ def iterate_build cfg
       inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
       copy_assets(step.source, step.target, inclusive)
     when "render"
-      if defined?(step.data)
+      if defined?(step.data) # if we're passing attributes as a YAML file, let's ingest that up front
+        validate_file_input(step.data, "data")
         attrs = ingest_attributes(step.data)
       else
         attrs = {}
@@ -162,11 +163,11 @@ class BuildConfig
       raise "ConfigStructError"
     end
 
-    @@cfg = config
+    @cfg = config
   end
 
   def steps
-    @@cfg
+    @cfg
   end
 
   def deprecated_format config # for backward compatibility with 0.1.0 and 0.2.0
@@ -183,35 +184,35 @@ end #class BuildConfig
 class BuildConfigStep
 
   def initialize step
-    @@step = step
-    if (defined?(@@step['action'])).nil?
+    @step = step
+    if (defined?(@step['action'])).nil?
       raise "ConfigStructError"
     end
     validate()
   end
 
   def type
-    return @@step['action']
+    return @step['action']
   end
 
   def data
-    return @@step['data']
+    return @step['data']
   end
 
   def source
-    return @@step['source']
+    return @step['source']
   end
 
   def target
-    return @@step['target']
+    return @step['target']
   end
 
   def options
-    return @@step['options']
+    return @step['options']
   end
 
   def builds
-    return @@step['builds']
+    return @step['builds']
   end
 
   def validate
@@ -224,8 +225,8 @@ class BuildConfigStep
       reqs = ["source,builds"]
     end
     for req in reqs
-      if (defined?(@@step[req])).nil?
-        @@logger.error "Every #{@@step['action']}-type in the configuration file needs a '#{req}' declaration."
+      if (defined?(@step[req])).nil?
+        @logger.error "Every #{@step['action']}-type in the configuration file needs a '#{req}' declaration."
         raise "ConfigStructError"
       end
     end
@@ -236,32 +237,37 @@ end #class Action
 class Build
 
   def initialize build, type
-    @@build = build
-    @@type = type
+    @build = build
+    @type = type
   end
 
   def template
-    @@build['template']
+    @build['template']
   end
 
   def output
-    @@build['output']
+    @build['output']
   end
 
   def style
-    @@build['style']
+    @build['style']
   end
 
   def doctype
-    @@build['doctype']
+    @build['doctype']
   end
 
   def backend
-    @@build['backend']
+    @build['backend']
   end
 
   def attributes
-    @@build['attributes']
+    @build['attributes']
+  end
+
+  def set key, val
+    @build[key] = val
+    puts "#{key} => #{@build[key]}"
   end
 
   def validate
@@ -284,25 +290,25 @@ end #class Build
 class DataSrc
   # initialization means establishing a proper hash for the 'data' param
   def initialize datasrc
-    @@datasrc = {}
+    @datasrc = {}
     if datasrc.is_a? String # create a hash out of the filename
       begin
-        @@datasrc['file'] = datasrc
-        @@datasrc['ext'] = File.extname(datasrc)
-        @@datasrc['type'] = false
-        @@datasrc['pattern'] = false
+        @datasrc['file'] = datasrc
+        @datasrc['ext'] = File.extname(datasrc)
+        @datasrc['type'] = false
+        @datasrc['pattern'] = false
       rescue
         raise "InvalidDataFilename"
       end
     else
       if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
-        @@datasrc['file'] = datasrc['file']
-        @@datasrc['ext'] = File.extname(datasrc['file'])
+        @datasrc['file'] = datasrc['file']
+        @datasrc['ext'] = File.extname(datasrc['file'])
         if (defined?(datasrc['pattern']))
-          @@datasrc['pattern'] = datasrc['pattern']
+          @datasrc['pattern'] = datasrc['pattern']
         end
         if (defined?(datasrc['type']))
-          @@datasrc['type'] = datasrc['type']
+          @datasrc['type'] = datasrc['type']
         end
       else # datasrc is neither String nor Hash
         raise "InvalidDataSource"
@@ -311,25 +317,25 @@ class DataSrc
   end
 
   def file
-    @@datasrc['file']
+    @datasrc['file']
   end
 
   def ext
-    @@datasrc['ext']
+    @datasrc['ext']
   end
 
   def type
-    if @@datasrc['type'] # if we're carrying a 'type' setting for data, pass it along
-      datatype = @@datasrc['type']
+    if @datasrc['type'] # if we're carrying a 'type' setting for data, pass it along
+      datatype = @datasrc['type']
       if datatype.downcase == "yaml" # This is an expected common error, so let's do the user a solid
         datatype = "yml"
       end
     else # If there's no 'type' defined, extract it from the filename and validate it
-      unless @@datasrc['ext'].downcase.match(/\.yml|\.json|\.xml|\.csv/)
+      unless @datasrc['ext'].downcase.match(/\.yml|\.json|\.xml|\.csv/)
         # @logger.error "Data file extension must be one of: .yml, .json, .xml, or .csv or else declared in config file."
         raise "FileExtensionUnknown"
       end
-      datatype = @@datasrc['ext']
+      datatype = @datasrc['ext']
       datatype = datatype[1..-1] # removes leading dot char
     end
     unless datatype.downcase.match(/yml|json|xml|csv|regex/) # 'type' must be one of these permitted vals
@@ -340,19 +346,19 @@ class DataSrc
   end
 
   def pattern
-    @@datasrc['pattern']
+    @datasrc['pattern']
   end
 end
 
 class AsciiDocument
   def initialize map, type='article'
-    @@index = map
-    @@attributes = {}
-    @@type = type
+    @index = map
+    @attributes = {}
+    @type = type
   end
 
   def index
-    @@index
+    @index
   end
 
   def add_attrs! attrs
@@ -361,11 +367,11 @@ class AsciiDocument
   end
 
   def attributes
-    @@attributes
+    @attributes
   end
 
   def type
-    @@type
+    @type
   end
 end
 
@@ -508,10 +514,8 @@ def copy_assets src, dest, inclusive=true
     target_dir = dest
   end
   @logger.debug "Copying #{src} to #{dest}"
-  # puts "Dir name: " + File.dirname(dest)
-  # puts "Dir exists: " + File.exists?(File.dirname(dest)).to_s
   begin
-    FileUtils.mkdir_p(dest) unless File.exists?(target_dir)
+    FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
     if File.directory?(src)
       FileUtils.cp_r(src, dest)
     else
@@ -553,13 +557,23 @@ end
 def asciidocify doc, build
   @logger.debug "Executing Asciidoctor render operation for #{build.output}."
   to_file = build.output
+  unless doc.type == build.doctype
+    puts "performing..."
+    if build.doctype.nil?
+      build.set("doctype", doc.type)
+    end
+  end
+  puts "document doctype: #{doc.type}"
+  puts "build doctype: #{build.doctype}"
   back = derive_backend(doc.type, build.output)
-  if defined?(build.style).nil?
+  unless build.style.nil?
     case back
     when "pdf"
       doc.add_attrs!({"pdf-style"=>build.style})
     when "html5"
       doc.add_attrs!({"stylesheet"=>build.style})
+    else
+      raise "UnrecognizedBackend"
     end
   end
   # Add attributes from config file build section
@@ -568,18 +582,25 @@ def asciidocify doc, build
   doc.add_attrs!(@passed_attrs)
   @logger.debug "Final pre-parse attributes: #{doc.attributes}"
   # Perform the aciidoctor convert
-  Asciidoctor.convert_file(
-    doc.index,
-    to_file: to_file,
-    attributes: doc.attributes,
-    require: "pdf",
-    backend: back,
-    doctype: build.doctype,
-    safe: "server",
-    sourcemap: true,
-    verbose: @verbose,
-    mkdirs: true
-  )
+  unless back == "pdf"
+    Asciidoctor.convert_file(
+      doc.index,
+      to_file: to_file,
+      attributes: doc.attributes,
+      require: "pdf",
+      backend: back,
+      doctype: build.doctype,
+      safe: "unsafe",
+      sourcemap: true,
+      verbose: @verbose,
+      mkdirs: true
+    )
+  else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency does not seem to perform the same way
+    attributes = '-a ' + doc.attributes.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
+    command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attributes} -a no-header-footer --trace #{doc.index}"
+    @logger.debug "Running #{command}"
+    system command
+  end
   @logger.info "Rendered file #{to_file}."
 end
 
@@ -655,7 +676,6 @@ module CustomFilters
   def parameterize!(sep = '_')
     replace(self.parameterize(sep))
   end
-
 end
 
 # register custom Liquid filters
