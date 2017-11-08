@@ -646,34 +646,14 @@ module CustomFilters
     end
   end
 
-  # From Slate Studio's fork of Locomotive CMS engine
-  # https://github.com/slate-studio/engine/blob/master/lib/locomotive/core_ext.rb
-  def slugify(options = {})
-    options = { :sep => '_', :without_extension => false, :downcase => false, :underscore => false }.merge(options)
-    # replace accented chars with ther ascii equivalents
-    s = ActiveSupport::Inflector.transliterate(self).to_s
-    # No more than one slash in a row
-    s.gsub!(/(\/[\/]+)/, '/')
-    # Remove leading or trailing space
-    s.strip!
-    # Remove leading or trailing slash
-    s.gsub!(/(^[\/]+)|([\/]+$)/, '')
-    # Remove extensions
-    s.gsub!(/(\.[a-zA-Z]{2,})/, '') if options[:without_extension]
+  def slugify input
     # Downcase
-    s.downcase! if options[:downcase]
     # Turn unwanted chars into the seperator
-    s.gsub!(/[^a-zA-Z0-9\-_\+\/]+/i, options[:sep])
-    # Underscore
-    s.gsub!(/[\-]/i, '_') if options[:underscore]
+    s = input.to_s.downcase
+    s.gsub!(/[^a-zA-Z0-9\-_\+\/]+/i, "-")
     s
   end
-  def slugify!(options = {})
-    replace(self.slugify(options))
-  end
-  def parameterize!(sep = '_')
-    replace(self.parameterize(sep))
-  end
+
 end
 
 # register custom Liquid filters
