@@ -1,4 +1,4 @@
-require "liquidoc"
+require 'liquidoc'
 require 'yaml'
 require 'json'
 require 'optparse'
@@ -84,7 +84,11 @@ def iterate_build cfg
       builds = step.builds
       for bld in builds
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
-        liquify(data, build.template, build.output) # perform the liquify operation
+        if build.template
+          liquify(data, build.template, build.output) # perform the liquify operation
+        else
+          regurgidata(data, build.output)
+        end
       end
     when "migrate"
       inclusive = true
@@ -386,6 +390,16 @@ end
 # PARSE-type build procs
 # ===
 
+# Get data
+def get_data datasrc
+  @logger.debug "Executing liquify parsing operation."
+  if datasrc.is_a? String
+    datasrc = DataSrc.new(datasrc)
+  end
+  validate_file_input(datasrc.file, "data")
+  return ingest_data(datasrc)
+end
+
 # Pull in a semi-structured data file, converting contents to a Ruby hash
 def ingest_data datasrc
 # Must be passed a proper data object (there must be a better way to validate arg datatypes)
@@ -464,13 +478,8 @@ end
 
 # Parse given data using given template, generating given output
 def liquify datasrc, template_file, output
-  @logger.debug "Executing liquify parsing operation."
-  if datasrc.is_a? String
-    datasrc = DataSrc.new(datasrc)
-  end
-  validate_file_input(datasrc.file, "data")
+  data = get_data(datasrc)
   validate_file_input(template_file, "template")
-  data = ingest_data(datasrc)
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
@@ -499,6 +508,29 @@ def liquify datasrc, template_file, output
     end
   else # if stdout
     puts "========\nOUTPUT: Rendered with template #{template_file}:\n\n#{rendered}\n"
+  end
+end
+
+def regurgidata datasrc, output
+  data = get_data(datasrc)
+  raise "UnrecognizedFileExtension" unless File.extname(output).match(/\.yml|\.json|\.xml|\.csv/)
+  case File.extname(output)
+    when ".yml"
+      new_data = data.to_yaml
+    when ".json"
+      new_data = data.to_json
+    when ".xml"
+      @logger.warn "XML output not yet implemented."
+    when ".csv"
+      @logger.warn "CSV output not yet implemented."
+  end
+  if new_data
+    begin
+      File.open(output, 'w') { |file| file.write(new_data) }
+      @logger.info "Data converted and saved to #{output}."
+    rescue
+      raise "FileWriteError"
+    end
   end
 end
 

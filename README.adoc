@@ -308,11 +308,22 @@ Its use case is usually when you simply cannot control the form your source take
 The regex type is also handy when the content of some fields would be burdensome to store in conventional semi-structured formats like those natively parsed by LiquiDoc.
 This is the case for jumbled content containing characters that require escaping, so you can keep source like that from the example above in the simplest possible form.
 
-==== Templating
+==== Default Output Formats
 
-LiquiDoc will add the powers of Asciidoctor in a future release, enabling initial reformatting of complex source data _into_ AsciiDoc format using Liquid templates, followed by final publishing into rich formats such as PDF, HTML, and even slide presentations.
-Other template engines may be added, such as ERB, HAML, Handlebars.
-Requests are welcome.
+LiquiDoc can directly convert any semi-structured data input format to either YAML or JSON output.
+Simply provide no template, and make sure the output file has a proper extension (`.yml` or `.json`).
+
+.Example config snippet for data-to-data conversion
+[source,yaml]
+----
+- action: parse
+  data: _data/testdata.xml
+  output: _build/frontend/testdata.json
+----
+
+XML and CSV output will be added in a future release.
+
+==== Templating
 
 link:https://help.shopify.com/themes/liquid/basics[*Liquid*] is used for parsing complex variable data, typically for iterated output.
 For instance, a data structure of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
@@ -676,6 +687,7 @@ Points either to a YAML configuration for PDF styles or a CSS stylesheet for HTM
 
 Here is a table of all the established configuration settings, as they pertain to each key LiquiDoc action.
 
+// tag::options-table[]
 [cols="3,1,1,1,1",options="header"]
 |===
 | Setting
@@ -731,7 +743,7 @@ s| output
 |
 
 s| template
-| Required
+| Optional
 | N/A
 | N/A
 |
@@ -748,6 +760,7 @@ s| attributes
 | Optional
 |
 |===
+// end::options-table[]
 
 == Meta
 // tag::meta[]
