@@ -7,12 +7,14 @@ The highly configurable command-line utility engages template engines to parse c
 Sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
 LiquiDoc also accepts *regular expressions* to parse unconventionally formatted files.
 
+LiquiDoc relies heavily on the Asciidoctor rendering engine, which produces HTML, PDF, and soon several other rich-text output formats.
+
 Output can (or will) be pretty much any flat file, including semi-structured data like JSON and XML, as well as rich text/multimedia formats like HTML, PDF, slide decks, and more.
 // end::overview[]
 // tag::rocana-note[]
 [NOTE]
 While the first two releases of LiquiDoc were released under the MIT license by my former employer, I do not believe the https://github.com/scalingdata/liquidoc-gem[originating repo] will be maintained.
-Therefore, as of version 0.3.0, I will maintain this fork under the MIT license.
+Therefore, as of version 0.3.0, I maintain this fork under the MIT license.
 More below under <<Contributing>> and <<License>>.
 
 // end::rocana-note[]
@@ -35,7 +37,7 @@ Alternatively, LiquiDoc can parse it into a generated source file during the pro
 
 === Coming Soon
 
-Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files into PDF, ePub, and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
+Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files to ePub and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
 See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
 // end::purpose[]
 
@@ -59,6 +61,7 @@ source 'https://rubygems.org'
 gem 'json'
 gem 'liquid'
 gem 'asciidoctor'
+gem 'asciidoctor-pdf'
 gem 'logger'
 gem 'crack'
 gem 'liquidoc'
@@ -817,5 +820,6 @@ The LiquiDoc gem at rubygems.org will be published out of this repo starting wit
 LiquiDoc and _Codewriting_ author Brian Dominick is now available for contract work around implementation of advanced docs-as-code infrastructure.
 I am thrilled to work with engineering and support teams at software companies.
 I'm also seeking opportunities to innovate management of documentation and presentations at non-software organizations -- especially if you're working to make the world a better place!
+Check out link:https://codewriting.org[codewriting.org] for more info.
 
 // end::consulting[]
