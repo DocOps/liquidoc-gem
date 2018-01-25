@@ -131,7 +131,7 @@ Here is the basic structure of a valid config file:
       output: _output/output_file.md # <5>
 ----
 
-<1> The top-level `- ` denotes a new, consecutively executed “step” in the build.
+<1> The top-level `-` denotes a new, consecutively executed “step” in the build.
 The *action* parameter determines what type of action this step will perform.
 The options are `parse`, `migrate`, `render`, and `deploy`.
 
@@ -635,12 +635,12 @@ Imagine this affecting content in the book file.
 \include::chapter-1.adoc[]
 
 \include::chapter-2.adoc[]
-\\ ifeval::[{edition} == "Special"]
+\ifeval::[{edition} == "Special"]
 \include::chapter-3.adoc[]
-\\ endif::[]
+\endif::[]
 ----
 +
-The AsciiDoc code above that might be least familiar to you is conditional code.
+The AsciiDoc code above that might be least familiar to you is conditional code, represented by the `endif::[]` and `endif::[]` markup.
 Here we see how passing attributes at the _build iteration_ level gives us all kinds of cool powers.
 Not only are we setting the subtitle with a variable; if we're building the special edition, we add a chapter the other two editions ignore.
 
@@ -780,6 +780,9 @@ I totally dig markup languages and dynamic template engines, both of which I've 
 
 You don't have to love it to use it, or even to contribute.
 But if you get what I'm trying to do, give a holler.
+
+The reason I'm developing LiquiDoc is to most flexibly handle common single-sourcing challenges posed by a divergence in tools.
+I intend to experiment with other toolchains, datasource types, and template engines, but the point of this utility is to pull together great technologies to solve tough, recurring problems.
 // end::meta[]
 
 === Contributing
@@ -818,7 +821,7 @@ The LiquiDoc gem at rubygems.org will be published out of this repo starting wit
 === Consulting
 // tag::consulting[]
 LiquiDoc and _Codewriting_ author Brian Dominick is now available for contract work around implementation of advanced docs-as-code infrastructure.
-I am thrilled to work with engineering and support teams at software companies.
+I am eager to work with engineering and support teams at software companies.
 I'm also seeking opportunities to innovate management of documentation and presentations at non-software organizations -- especially if you're working to make the world a better place!
 Check out link:https://codewriting.org[codewriting.org] for more info.
 
