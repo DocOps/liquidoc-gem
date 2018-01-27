@@ -289,28 +289,21 @@ class DataSrc
   # initialization means establishing a proper hash for the 'data' param
   def initialize datasrc
     @datasrc = {}
-    if datasrc.is_a? String # create a hash out of the filename
-      begin
-        @datasrc['file'] = datasrc
-        @datasrc['ext'] = File.extname(datasrc)
-        @datasrc['type'] = false
-        @datasrc['pattern'] = false
-      rescue
-        raise "InvalidDataFilename"
+    @datasrc['file'] = datasrc
+    @datasrc['ext'] = File.extname(datasrc)
+    @datasrc['type'] = false
+    @datasrc['pattern'] = false
+    if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
+      @datasrc['file'] = datasrc['file']
+      @datasrc['ext'] = File.extname(datasrc['file'])
+      if (defined?(datasrc['pattern']))
+        @datasrc['pattern'] = datasrc['pattern']
       end
-    else
-      if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
-        @datasrc['file'] = datasrc['file']
-        @datasrc['ext'] = File.extname(datasrc['file'])
-        if (defined?(datasrc['pattern']))
-          @datasrc['pattern'] = datasrc['pattern']
-        end
-        if (defined?(datasrc['type']))
-          @datasrc['type'] = datasrc['type']
-        end
-      else # datasrc is neither String nor Hash
-        raise "InvalidDataSource"
+      if (defined?(datasrc['type']))
+        @datasrc['type'] = datasrc['type']
       end
+    else # datasrc is neither String nor Hash
+      raise "InvalidDataSource"
     end
   end
 
@@ -616,7 +609,7 @@ def asciidocify doc, build
       verbose: @verbose,
       mkdirs: true
     )
-  else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency does not seem to perform the same way
+  else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency doesn't seem to perform the same way
     attributes = '-a ' + doc.attributes.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
     command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attributes} -a no-header-footer --trace #{doc.index}"
     @logger.debug "Running #{command}"
