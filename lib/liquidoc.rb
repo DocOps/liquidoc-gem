@@ -92,7 +92,6 @@ def iterate_build cfg
       copy_assets(step.source, step.target, inclusive)
     when "render"
       if defined?(step.data) # if we're passing attributes as a YAML file, let's ingest that up front
-        validate_file_input(step.data, "data")
         attrs = ingest_attributes(step.data)
       else
         attrs = {}
@@ -396,20 +395,20 @@ def ingest_data datasrc
   case datasrc.type
   when "yml"
     begin
-      return YAML.load_file(datasrc.file)
+      data = YAML.load_file(datasrc.file)
     rescue Exception => ex
       @logger.error "There was a problem with the data file. #{ex.message}"
     end
   when "json"
     begin
-      return JSON.parse(File.read(datasrc.file))
+      data = JSON.parse(File.read(datasrc.file))
     rescue Exception => ex
       @logger.error "There was a problem with the data file. #{ex.message}"
     end
   when "xml"
     begin
       data = Crack::XML.parse(File.read(datasrc.file))
-      return data['root']
+      data = data['root']
     rescue Exception => ex
       @logger.error "There was a problem with the data file. #{ex.message}"
     end
@@ -422,13 +421,13 @@ def ingest_data datasrc
         i = i+1
       end
       output = {"data" => output}
-      return output
+      data = output
     rescue
       @logger.error "The CSV format is invalid."
     end
   when "regex"
     if datasrc.pattern
-      return parse_regex(datasrc.file, datasrc.pattern)
+      data = parse_regex(datasrc.file, datasrc.pattern)
     else
       @logger.error "You must supply a regex pattern with your free-form data file."
       raise "MissingRegexPattern"
@@ -533,16 +532,40 @@ end
 # RENDER-type procs
 # ===
 
-# Gather attributes from a fixed attributes file
-# Use _data/attributes.yml or designate as -a path/to/filename.yml
-def ingest_attributes attributes_file
-  validate_file_input(attributes_file, "attributes")
-  begin
-    attributes = YAML.load_file(attributes_file)
-    return attributes
-  rescue
-    @logger.warn "Attributes file invalid."
+# Gather attributes from one or more fixed attributes files
+def ingest_attributes attr_file
+  file_array = attr_file.split(",")
+  attrs = {}
+  for f in file_array
+    if f.include? ":"
+      file = f.split(":")
+      filename = file[0]
+      block_name = file[1]
+    else
+      filename = f
+      block_name = false
+    end
+    validate_file_input(filename, "attributes")
+    begin
+      new_attrs = YAML.load_file(filename)
+      if block_name
+        begin
+          new_attrs = new_attrs[block_name]
+        rescue
+          raise "InvalidAttributesBlock"
+        end
+      end
+    rescue Exception => ex
+      @logger.error "Attributes block invalid. #{ex.class}: #{ex.message}"
+      raise "AttributeBlockError"
+    end
+    begin
+      attrs.merge!new_attrs
+    rescue Exception => ex
+      raise "AttributesMergeError #{ex.message}"
+    end
   end
+  return attrs
 end
 
 def derive_backend type, out_file
