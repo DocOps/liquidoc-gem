@@ -290,7 +290,7 @@ class DataSrc
   def initialize datasrc
     @datasrc = {}
     @datasrc['file'] = datasrc
-    @datasrc['ext'] = File.extname(datasrc)
+    @datasrc['ext'] = ''
     @datasrc['type'] = false
     @datasrc['pattern'] = false
     if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
@@ -302,8 +302,12 @@ class DataSrc
       if (defined?(datasrc['type']))
         @datasrc['type'] = datasrc['type']
       end
-    else # datasrc is neither String nor Hash
-      raise "InvalidDataSource"
+    else
+      if datasrc.is_a? String
+        @datasrc['ext'] = File.extname(datasrc)
+      else # datasrc is neither string nor hash
+        raise "InvalidDataSource"
+      end
     end
   end
 
