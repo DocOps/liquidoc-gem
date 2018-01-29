@@ -410,15 +410,13 @@ def ingest_data datasrc
       @logger.error "There was a problem with the data file. #{ex.message}"
     end
   when "csv"
-    output = []
+    data = []
     i = 0
     begin
       CSV.foreach(datasrc.file, headers: true, skip_blanks: true) do |row|
-        output[i] = row.to_hash
+        data[i] = row.to_hash
         i = i+1
       end
-      output = {"data" => output}
-      data = output
     rescue
       @logger.error "The CSV format is invalid."
     end
@@ -430,6 +428,10 @@ def ingest_data datasrc
       raise "MissingRegexPattern"
     end
   end
+  if data.is_a? Array
+    data = {"data" => data}
+  end
+  return data
 end
 
 def parse_regex data_file, pattern
