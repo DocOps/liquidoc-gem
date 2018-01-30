@@ -38,6 +38,7 @@ Alternatively, LiquiDoc can parse it into a generated source file during the pro
 === Coming Soon
 
 Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files to ePub and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
+
 See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
 // end::purpose[]
 
@@ -589,13 +590,14 @@ my_custom_var: Some text, can include spaces and most punctuation
 ----
 +
 This file must be called out in your configuration using the top-level *data* setting.
+You may also pass *multiple files* and/or just a sub-block of a given file (a named variable with its own nested data).
 +
 [source,yaml]
 .Example AsciiDoc data file setting for attributes ingest
 ----
 - action: render
   source: my_index.adoc
-  data: _data/asciidoctor-attributes.yml
+  data: _data/asciidoctor.yml
   builds:
     - output: myfile.html
 ----
@@ -612,7 +614,7 @@ So if your _document_ is a book, and your _builds_ are an HTML edition and a PDF
 ----
   - action: render
     source: my_book.adoc
-    data: _data/asciidoctor-attributes.yml
+    data: _data/asciidoctor.yml
     builds:
       - output: my_book.html
         attributes:
@@ -655,6 +657,22 @@ You may pass as many attributes as you like this way, up to the capacity of your
 ----
 bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW' -a testvar=working
 ----
+
+multiple attribute files::
+You may also specify more than one attribute file by separating filenames with commas.
+They will be processed in order.
+
+specific subdata::
+You may designate a specific block in your data file by designating it with a colon.
++
+.Example -- Designating a data block within a file
+----
+  data: asciidoc.yml,product.yml:settings.v2
+----
++
+Here we see `,` used as a delimiter between files and `:` as an indicator that a variable indicator follows.
+In this case, the render action will load the `settings.v2` block from the `product.yml` file.
++
 
 ==== Render Build Settings
 
@@ -814,7 +832,7 @@ I am not sure if the copyright for the prime source transferred to Splunk, but i
 This fork repository will be actively maintained by the original author, and my old coworkers and their new employer can make make use of my upgrades like everyone else.
 
 [NOTE]
-The LiquiDoc gem at rubygems.org will be published out of this repo starting with version 0.2.0.
+The LiquiDoc gem at rubygems.org has been published out of this repo starting with version 0.2.0.
 
 // tag::licensing[]
 
