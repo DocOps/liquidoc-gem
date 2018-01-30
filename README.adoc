@@ -7,12 +7,14 @@ The highly configurable command-line utility engages template engines to parse c
 Sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
 LiquiDoc also accepts *regular expressions* to parse unconventionally formatted files.
 
+LiquiDoc relies heavily on the Asciidoctor rendering engine, which produces HTML, PDF, and soon several other rich-text output formats.
+
 Output can (or will) be pretty much any flat file, including semi-structured data like JSON and XML, as well as rich text/multimedia formats like HTML, PDF, slide decks, and more.
 // end::overview[]
 // tag::rocana-note[]
 [NOTE]
 While the first two releases of LiquiDoc were released under the MIT license by my former employer, I do not believe the https://github.com/scalingdata/liquidoc-gem[originating repo] will be maintained.
-Therefore, as of version 0.3.0, I will maintain this fork under the MIT license.
+Therefore, as of version 0.3.0, I maintain this fork under the MIT license.
 More below under <<Contributing>> and <<License>>.
 
 // end::rocana-note[]
@@ -35,7 +37,8 @@ Alternatively, LiquiDoc can parse it into a generated source file during the pro
 
 === Coming Soon
 
-Upcoming capabilities include generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files into ePub and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Mardown-based static site generation tools such as Jekyll.
+Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files to ePub and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
+
 See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
 // end::purpose[]
 
@@ -129,7 +132,7 @@ Here is the basic structure of a valid config file:
       output: _output/output_file.md # <5>
 ----
 
-<1> The top-level `- ` denotes a new, consecutively executed “step” in the build.
+<1> The top-level `-` denotes a new, consecutively executed “step” in the build.
 The *action* parameter determines what type of action this step will perform.
 The options are `parse`, `migrate`, `render`, and `deploy`.
 
@@ -309,11 +312,22 @@ Its use case is usually when you simply cannot control the form your source take
 The regex type is also handy when the content of some fields would be burdensome to store in conventional semi-structured formats like those natively parsed by LiquiDoc.
 This is the case for jumbled content containing characters that require escaping, so you can keep source like that from the example above in the simplest possible form.
 
-==== Templating
+==== Default Output Formats
 
-LiquiDoc will add the powers of Asciidoctor in a future release, enabling initial reformatting of complex source data _into_ AsciiDoc format using Liquid templates, followed by final publishing into rich formats such as PDF, HTML, and even slide presentations.
-Other template engines may be added, such as ERB, HAML, Handlebars.
-Requests are welcome.
+LiquiDoc can directly convert any semi-structured data input format to either YAML or JSON output.
+Simply provide no template, and make sure the output file has a proper extension (`.yml` or `.json`).
+
+.Example config snippet for data-to-data conversion
+[source,yaml]
+----
+- action: parse
+  data: _data/testdata.xml
+  output: _build/frontend/testdata.json
+----
+
+XML and CSV output will be added in a future release.
+
+==== Templating
 
 link:https://help.shopify.com/themes/liquid/basics[*Liquid*] is used for parsing complex variable data, typically for iterated output.
 For instance, a data structure of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
@@ -623,12 +637,12 @@ Imagine this affecting content in the book file.
 \include::chapter-1.adoc[]
 
 \include::chapter-2.adoc[]
-\\ ifeval::[{edition} == "Special"]
+\ifeval::[{edition} == "Special"]
 \include::chapter-3.adoc[]
-\\ endif::[]
+\endif::[]
 ----
 +
-The AsciiDoc code above that might be least familiar to you is conditional code.
+The AsciiDoc code above that might be least familiar to you is conditional code, represented by the `endif::[]` and `endif::[]` markup.
 Here we see how passing attributes at the _build iteration_ level gives us all kinds of cool powers.
 Not only are we setting the subtitle with a variable; if we're building the special edition, we add a chapter the other two editions ignore.
 
@@ -694,6 +708,7 @@ Points either to a YAML configuration for PDF styles or a CSS stylesheet for HTM
 
 Here is a table of all the established configuration settings, as they pertain to each key LiquiDoc action.
 
+// tag::options-table[]
 [cols="3,1,1,1,1",options="header"]
 |===
 | Setting
@@ -749,7 +764,7 @@ s| output
 |
 
 s| template
-| Required
+| Optional
 | N/A
 | N/A
 |
@@ -766,6 +781,7 @@ s| attributes
 | Optional
 |
 |===
+// end::options-table[]
 
 == Meta
 // tag::meta[]
@@ -782,6 +798,9 @@ I totally dig markup languages and dynamic template engines, both of which I've 
 
 You don't have to love it to use it, or even to contribute.
 But if you get what I'm trying to do, give a holler.
+
+The reason I'm developing LiquiDoc is to most flexibly handle common single-sourcing challenges posed by a divergence in tools.
+I intend to experiment with other toolchains, datasource types, and template engines, but the point of this utility is to pull together great technologies to solve tough, recurring problems.
 // end::meta[]
 
 === Contributing
@@ -820,7 +839,8 @@ The LiquiDoc gem at rubygems.org has been published out of this repo starting wi
 === Consulting
 // tag::consulting[]
 LiquiDoc and _Codewriting_ author Brian Dominick is now available for contract work around implementation of advanced docs-as-code infrastructure.
-I am thrilled to work with engineering and support teams at software companies.
+I am eager to work with engineering and support teams at software companies.
 I'm also seeking opportunities to innovate management of documentation and presentations at non-software organizations -- especially if you're working to make the world a better place!
+Check out link:https://codewriting.org[codewriting.org] for more info.
 
 // end::consulting[]
