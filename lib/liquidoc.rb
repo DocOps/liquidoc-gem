@@ -95,21 +95,18 @@ def iterate_build cfg
       inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
       copy_assets(step.source, step.target, inclusive)
     when "render"
-      if defined?(step.data) # if we're passing attributes as a YAML file, let's ingest that up front
-        attrs = ingest_attributes(step.data)
-      else
-        attrs = {}
-      end
-      validate_file_input(step.source, "source")
+      validate_file_input(step.source, "source") if step.source
       doc = AsciiDocument.new(step.source)
-      doc.add_attrs!(attrs)
+      attrs = ingest_attributes(step.data) if step.data # Set attributes in from YAML files
+      doc.add_attrs!(attrs) # Set attributes from the action-level data file
       builds = step.builds
       for bld in builds
-        build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
-        asciidocify(doc, build) # perform the liquify operation
+        build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type' string
+        render_doc(doc, build) # perform the render operation
       end
     when "deploy"
-      @logger.warn "Deploy actions not yet implemented."
+      @logger.warn "Deploy actions are limited and experimental experimental."
+      jekyll_serve(build)
     else
       @logger.warn "The action `#{type}` is not valid."
     end
@@ -225,7 +222,7 @@ class BuildConfigStep
     when "migrate"
       reqs = ["source,target"]
     when "render"
-      reqs = ["source,builds"]
+      reqs = ["builds"]
     end
     for req in reqs
       if (defined?(@step[req])).nil?
@@ -240,6 +237,8 @@ end #class Action
 class Build
 
   def initialize build, type
+    build['attributes'] = Hash.new unless build['attributes']
+    build['props'] = build['properties'] if build['properties']
     @build = build
     @type = type
   end
@@ -264,12 +263,59 @@ class Build
     @build['backend']
   end
 
+  def props
+    @build['props']
+  end
+
+  def prop_files_array
+    if props
+      if props['files']
+        begin
+          props['files'].force_array if props['files']
+        rescue Exception => ex
+          raise "PropertiesFilesArrayError: #{ex}"
+        end
+      end
+    else
+      Array.new
+    end
+  end
+
+  # def prop_files_list # force the array back to a list of files (for CLI)
+  #   props['files'].force_array if props['files']
+  # end
+
+  # NOTE this section repeats in Class.AsciiDocument
   def attributes
     @build['attributes']
   end
 
+  def add_attrs! attrs
+    begin
+      attrs.to_h unless attrs.is_a? Hash
+      self.attributes.merge!attrs
+    rescue
+      raise "InvalidAttributesFormat"
+    end
+  end
+
   def set key, val
     @build[key] = val
+  end
+
+  def self.set key, val
+    @build[key] = val
+  end
+
+  def add_config_file config_file
+    @build['props'] = Hash.new unless @build['props']
+    @build['props']['files'] = Array.new unless @build['props']['files']
+    begin
+      files_array = @build['props']['files'].force_array
+      @build['props']['files'] = files_array.push(config_file)
+    rescue
+      raise "PropertiesFilesArrayError"
+    end
   end
 
   def validate
@@ -350,9 +396,9 @@ class DataSrc
 end
 
 class AsciiDocument
-  def initialize map, type='article'
-    @index = map
-    @attributes = {}
+  def initialize index, type='article'
+    @index = index
+    @attributes = {} # We start with clean attributes to delay setting those in the config > build step
     @type = type
   end
 
@@ -360,6 +406,7 @@ class AsciiDocument
     @index
   end
 
+  # NOTE this section repeats in Class.AsciiDocument
   def add_attrs! attrs
     raise "InvalidAttributesFormat" unless attrs.is_a?(Hash)
     self.attributes.merge!attrs
@@ -565,9 +612,9 @@ end
 
 # Gather attributes from one or more fixed attributes files
 def ingest_attributes attr_file
-  file_array = attr_file.split(",")
+  attr_files_array = attr_file.force_array
   attrs = {}
-  for f in file_array
+  attr_files_array.each do |f|
     if f.include? ":"
       file = f.split(":")
       filename = file[0]
@@ -609,38 +656,56 @@ def derive_backend type, out_file
   return backend
 end
 
+def render_doc doc, build
+  build.set("backend", derive_backend(doc.type, build.output) ) unless build.backend
+  case build.backend
+  when "html5", "pdf"
+    asciidocify(doc, build)
+  when "jekyll"
+    generate_site(doc, build)
+  else
+    raise "UnrecognizedBackend"
+  end
+end
+
 def asciidocify doc, build
   @logger.debug "Executing Asciidoctor render operation for #{build.output}."
   to_file = build.output
   unless doc.type == build.doctype
-    if build.doctype.nil?
+    if build.doctype.nil? # set a default doctype equal to our LiquiDoc action doc type
       build.set("doctype", doc.type)
     end
   end
-  back = derive_backend(doc.type, build.output)
-  unless build.style.nil?
-    case back
-    when "pdf"
-      doc.add_attrs!({"pdf-style"=>build.style})
-    when "html5"
-      doc.add_attrs!({"stylesheet"=>build.style})
+  # unfortunately we have to treat attributes accumilation differently for Jekyll vs Asciidoctor
+  attrs = doc.attributes # Start with attributes added at the action level; no more writing to doc obj
+  # Handle properties files array as attributes files and
+  # add the ingested attributes to local var
+  begin
+    if build.prop_files_array
+      ingested = ingest_attributes(build.prop_files_array)
+      attrs.merge!(ingested)
     else
-      raise "UnrecognizedBackend"
+      puts build.prop_files_array
     end
+  rescue Exception => ex
+    @logger.warn "Attributes failed to merge. #{ex}" # Shd only trigger if build.props exists
+    raise
+  end
+  if build.backend == "html5" # Insert a stylesheet
+    attrs.merge!({"stylesheet"=>build.style}) if build.style
   end
   # Add attributes from config file build section
-  doc.add_attrs!(build.attributes.to_h)
+  attrs.merge!(build.attributes) # Finally merge attributes from the build step
   # Add attributes from command-line -a args
-  doc.add_attrs!(@passed_attrs)
-  @logger.debug "Final pre-parse attributes: #{doc.attributes}"
+  @logger.debug "Final pre-parse attributes: #{attrs.to_yaml}"
   # Perform the aciidoctor convert
-  unless back == "pdf"
+  unless build.backend == "pdf"
     Asciidoctor.convert_file(
       doc.index,
       to_file: to_file,
-      attributes: doc.attributes,
+      attributes: attrs,
       require: "pdf",
-      backend: back,
+      backend: build.backend,
       doctype: build.doctype,
       safe: "unsafe",
       sourcemap: true,
@@ -648,19 +713,102 @@ def asciidocify doc, build
       mkdirs: true
     )
   else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency doesn't seem to perform the same way
-    attributes = '-a ' + doc.attributes.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
-    command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attributes} -a no-header-footer --trace #{doc.index}"
+    attrs = '-a ' + attrs.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
+    command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attrs} -a no-header-footer --trace #{doc.index}"
+    @logger.info "Generating PDF. This can take some time..."
     @logger.debug "Running #{command}"
     system command
   end
+  @logger.debug "AsciiDoc attributes: #{doc.attributes}"
   @logger.info "Rendered file #{to_file}."
 end
 
+def generate_site doc, build
+  case build.backend
+  when "jekyll"
+    attrs = doc.attributes
+    build.add_config_file("_config.yml") unless build.prop_files_array
+    jekyll_config = YAML.load_file(build.prop_files_array[0]) # load the first Jekyll config file locally
+    attrs.merge! ({"base_dir" => jekyll_config['source']}) # Sets default Asciidoctor base_dir to == Jekyll root
+    # write all AsciiDoc attributes to a config file for Jekyll to ingest
+    attrs.merge!(build.attributes) if build.attributes
+    attrs = {"asciidoctor" => {"attributes" => attrs} }
+    attrs_yaml = attrs.to_yaml # Convert it all back to Yaml, as we're going to write a file to feed back to Jekyll
+    FileUtils::mkdir_p("build/pre") unless File.exists?("build/pre")
+    File.open("build/pre/_attributes.yml", 'w') { |file| file.write(attrs_yaml) }
+    build.add_config_file("build/pre/_attributes.yml")
+    config_list = build.prop_files_array.join(',') # flatten the Array back down for the CLI
+    opts_args = ""
+    if build.props['arguments']
+      opts_args = build.props['arguments'].to_opts_args
+    end
+    command = "bundle exec jekyll build --config #{config_list} #{opts_args}"
+  end
+  @logger.info "Running #{command}"
+  @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
+  system command
+  jekyll_serve(build) if @jekyll_serve
+end
+
 # ===
-# Text manipulation Classes, Modules, filters, etc
+# DEPLOY procs
 # ===
 
+def jekyll_serve build
+  # Locally serve Jekyll as per the primary Jekyll config file
+  config_file = build.props['files'][0]
+  if build.props['arguments']
+    opts_args = build.props['arguments'].to_opts_args
+  end
+  command = "bundle exec jekyll serve --config #{config_file} #{opts_args} --no-watch --skip-initial-build"
+  system command
+end
+
+# ===
+# Text manipulation Classes, Modules, procs, etc
+# ===
+
+module HashMash
+
+  def to_opts_args
+    out = ''
+    if self.is_a? Hash # TODO Should also be testing for flatness
+      self.each do |opt,arg|
+        out = out + " --#{opt} #{arg}"
+      end
+    end
+    return out
+  end
+
+end
+
+class Hash
+  include HashMash
+end
+
+module ForceArray
+  # So we can accept a list string ("item1.yml,item2.yml") or a single item ("item1.yml")
+  # and convert to array as needed
+  def force_array
+    obj = self
+    unless obj.class == Array
+      if obj.class == String
+        if obj.include? ","
+          obj = obj.split(",") # Will even force a string with no commas to a 1-item array
+        else
+          obj = Array.new.push(obj)
+        end
+      else
+        raise "ForceArrayFail"
+      end
+    end
+    return obj.to_ary
+  end
+
+end
+
 class String
+  include ForceArray
 # Adapted from Nikhil Gupta
 # http://nikhgupta.com/code/wrapping-long-lines-in-ruby-for-display-in-source-files/
   def wrap options = {}
@@ -683,6 +831,10 @@ class String
     self.wrap(width: width).indent(spaces: spaces)
   end
 
+end
+
+class Array
+  include ForceArray
 end
 
 # Extending Liquid filters/text manipulation
@@ -712,7 +864,6 @@ end
 
 # register custom Liquid filters
 Liquid::Template.register_filter(CustomFilters)
-
 
 # ===
 # Command/options parser
@@ -769,6 +920,14 @@ command_parser = OptionParser.new do|opts|
     @output_type = "stdout"
   end
 
+  opts.on("--clean PATH", "Force deletes the designated directory and all its contents WITHOUT WARNING.") do |n|
+    @clean_dir = n
+  end
+
+  opts.on("--deploy", "EXPERIMENTAL: Trigger a jekyll serve operation against the destination dir of a Jekyll render step.") do
+    @jekyll_serve = true
+  end
+
   opts.on("-h", "--help", "Returns help.") do
     puts opts
     exit
@@ -785,7 +944,9 @@ command_parser.parse!
 # ===
 # Execute
 # ===
-
+if @clean_dir
+  FileUtils.remove_dir(@clean_dir)
+end
 unless @config_file
   if @data_file
     liquify(@data_file, @template_file, @output_file)

@@ -556,20 +556,74 @@ to demonstrate inclusion.
 
 The third instruction in our <<_fig_index_file>>, which was simply include::code-sample.js[lines="22..33"] -- this dangerous little bugger extracts a fixed span of code lines, as designated.
 
+==== Static Site Render Operations
+
+Static-site generators are critical tools to just about any docs-as-code infrastructure.
+Starting with Jekyll but soon to add more (link:http://awestruct.org[Awestruct] and possibly link:https://sysgears.com/grain/[Grain] next), each generator added will maintain all of its capabilities and do most of the heavy lifting.
+
+LiquiDoc's role is primarily to help your preferred SSG handle your source in ways consistent with any other rendering and file managing your docs codebase requires.
+For example, the jekyll-asciidoc extension that enables Jekyll builds to parse AsciiDoc markup only honors attributes set in Jekyll config files.
+Therefore, just before triggering the build, LiquiDoc writes a new config file from which Jekyll draws AsciiDoc attribute assignments.
+
+Jekyll::
+A Jekyll render operation calls `bundle exec jekyll build` from the command line pretty much the way you would do it manually.
+You still need a Jekyll configuration file with the usual settings in it.
+This is established in your build-config block
+
+[source,yaml]
+.Example Jekyll render action
+----
+- action: render
+  data: globals.yml
+  builds:
+    - backend: jekyll
+      properties:
+        files:
+          - _configs/jekyll-global.yml
+          - _configs/jekyll-portal-1.yml
+        arguments:
+          destination: build/site/user-basic
+      attributes:
+        portal_term: Guide
+----
+
+The *backend* designation of `jekyll` is required, and at least one file under *properties* > *files* is strongly encouraged for proper Jekyll behavior.
+LiquiDoc will write an additional YAML file containing all of the AsciiDoctor attributes will be appended to this list when the build command is run, thus capturing attributes offerd up in the action-level *data* file and the *arguments* block in the .
+
+The *arguments* block is made up of key-value parameters that establish or override any Jekyll config settings.
+
+[NOTE]
+The action-level parameter *source* is left blank in this example.
+This setting is _cannot_ be used to designate a Jekyll source path.
+If the above action had a second build step, such as a single output doc, the source would have relevance as the index file for that document.
+
 [[asciidoc-attributes]]
-==== Setting Attributes
+==== Setting AsciiDoc Attributes
 
-For `render` actions, the *source* file and other `.adoc` files determine most of the rest of the content source files.
-But Asciidoctor renderings can be configured and manipulated by globals _attribute_ settings.
-Furthermore, inline substitutions can be made out of data living outside the source tree of one particular document, passed into the document build in the form of -- you guessed it -- AsciiDoc _attributes_.
+For basic `render` actions, the *source* file and other `.adoc` files determine most of the rest of the content source files (if any) using AsciiDoc includes.
+But Asciidoctor renderings can be configured and manipulated by _attribute_ settings at other stages.
+Basically, we are trying to maximize our readiness to ingest document data and build properties from a wide range of sources.
+This way inline substitutions can be made out of data living outside the source tree of any particular document, passed into the document build in the form of YAML data converted into -- you guessed it -- AsciiDoc _attributes_.
 
-LiquiDoc provides several means for adding attributes to your documents, in addition to the ways you might be used to setting attributs.
-They are listed below in order of precedence -- an identical value set explicitly in each subsequent place will overwrite any set in the previous stages.
+LiquiDoc provides several means for adding attributes to your documents, in addition to the ways you might be used to setting attributes (inside your docfiles and command line).
+They are listed below _in the order of assignment/substitution_.
+Therefore, an identical value defined explicitly in each subsequent space will overwrite any set in the previous stages.
 
-Inline AsciiDoc::
-The most common way to set variables is inside your AsciiDoc source -- typically at the top of your `index.adoc` file or the equivalent.
+The order of substitution is as follows.
+
+. <<asciidoc-doc-inline,AsciiDoc document inline>>
+. <<document data file,document-data-file>>
+. <<per-build-properties-files,per-build properties files>>
+. <<per-build-liquidoc-config,per-build in LiquiDoc config>>
+. <<command-line-arguments,command-line arguments>>
+
+After that, we'll demonstrate even <<more-data,more ways to ingest datasets>>.
+
+[[asciidoc-doc-inline]]
+AsciiDoc document inline::
+The most common way to set variables is inside your AsciiDoc source files -- typically at the top of your `index.adoc` file or the equivalent.
 Any parameters set there will cascade through your files for parsing.
-This is good place to establish defaults, which can be overwritten by the other three means of setting AsciiDoc attributes.
+This is a good place to establish defaults, but they can be overwritten by the other three means of setting AsciiDoc attributes.
 +
 [source,asciidoc]
 .Example -- Setting AsciiDoc attributes inline
@@ -578,11 +632,12 @@ This is good place to establish defaults, which can be overwritten by the other 
 :imagesdir: ./img
 ----
 
-Data File::
+[[document-data-file]]
+Document data file::
 A YAML-formatted data file containing a stack of key-value pairs can be passed to Asciidoctor.
 +
 [source,yaml]
-.Example AsciiDoc attributes file
+.Example AsciiDoc attributes data file
 ----
 imagesdir: assets/images
 basedir: _build
@@ -590,7 +645,6 @@ my_custom_var: Some text, can include spaces and most punctuation
 ----
 +
 This file must be called out in your configuration using the top-level *data* setting.
-You may also pass *multiple files* and/or just a sub-block of a given file (a named variable with its own nested data).
 +
 [source,yaml]
 .Example AsciiDoc data file setting for attributes ingest
@@ -602,11 +656,30 @@ You may also pass *multiple files* and/or just a sub-block of a given file (a na
     - output: myfile.html
 ----
 +
-This method is advised for global settings across a particular _document_.
-It will eventually be made dynamic, so that dependent variables can emerge from previous settings within the file, similarly to how the Asciidoctor PDF theme file works with so-called link:https://github.com/asciidoctor/asciidoctor-pdf/blob/master/docs/theming-guide.adoc#keys["nested keys"].
+You may also pass *multiple files* and/or just a sub-block of a given file (a named variable with its own nested data).
+See <<#more-data,below>>.
 
-Config File::
-You can set or override document-level attributes _per build_ of any given document.
+[[per-build-properties-files]]
+Per-build properties files::
+With document-wide attributes set, we begin overwriting them on a _per-build_ basis for different renderings of that same source document.
+For starters, LiquiDoc can extract attributes from still more data files at this stage, like so:
++
+.Example -- Attribute extraction from build-specific data files
+[source,yaml]
+----
+  - output: _build/publish/manual-europe.pdf
+    properties:
+      files: _conf/jekyll.yml,_data/europe.yml
+  - output: _build/publish/manual-china.pdf
+    properties:
+      files: _conf/jekyll.yml,_data/china.yml
+----
++
+The *properties* > *files* setting can take the form of a comma-delimited list or a YAML array, and it can filter to specific subdata (see <<#more-data,below>>).
+These per-build properties files are meant to be document settings, so for static site renderings (e.g., Jekyll), these are meant to contain YAML files formatted for Jekyll configuration reads.
+
+[[per-build-liquidoc-config]]
+Per-build in LiquiDoc config::
 So if your _document_ is a book, and your _builds_ are an HTML edition and a PDF edition, you can pass distinct settings to each.
 +
 [source,yaml]
@@ -642,14 +715,15 @@ Imagine this affecting content in the book file.
 \endif::[]
 ----
 +
-The AsciiDoc code above that might be least familiar to you is conditional code, represented by the `endif::[]` and `endif::[]` markup.
+The AsciiDoc code above that might be least familiar to you is conditional code, represented by the `ifeval::[]` and `endif::[]` markup.
 Here we see how passing attributes at the _build iteration_ level gives us all kinds of cool powers.
 Not only are we setting the subtitle with a variable; if we're building the special edition, we add a chapter the other two editions ignore.
 
-command-line arguments::
+[[command-line-arguments]]
+Command-line arguments::
 There is yet a way to override all of this, which is also handy for testing variables out without editing any files:
 pass arguments via the `-a` command-line argument.
-The `-a` option flag accepts a string in the format of `key=value`, where `key` is the name of your attribute, and `value` is your assignment for that attribute.
+The `-a` option flag accepts an argument in the format of `key=value`, where `key` is the name of your attribute, and `value` is your optional assignment for that attribute.
 You may pass as many attributes as you like this way, up to the capacity of your shell's command line, which is probably something.
 +
 [source,bash]
@@ -658,6 +732,9 @@ You may pass as many attributes as you like this way, up to the capacity of your
 bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW' -a testvar=working
 ----
 
+[[more-data]]
+==== More ways to Ingest Attributes Data
+
 multiple attribute files::
 You may also specify more than one attribute file by separating filenames with commas.
 They will be processed in order.
@@ -665,23 +742,51 @@ They will be processed in order.
 specific subdata::
 You may designate a specific block in your data file by designating it with a colon.
 +
-.Example -- Designating a data block within a file
+.Example -- Listing multiple data files & designating a nested block
+[source,yaml]
 ----
-  data: asciidoc.yml,product.yml:settings.v2
+  data:
+    - asciidoc.yml
+    - product.yml:settings.attributes
+----
++
+.Example -- Designating a data block -- alternate format
+[source,yaml]
+----
+  properties:
+    files: asciidoc.yml,product.yml:settings.attributes
 ----
 +
 Here we see `,` used as a delimiter between files and `:` as an indicator that a variable indicator follows.
-In this case, the render action will load the `settings.v2` block from the `product.yml` file.
+In this case, the render action will load the `settings.attributes` block from the `product.yml` file.
 +
+.Example -- Designating data blocks within a properties files
+[source,yaml]
+----
+  properties:
+    files:
+      - countries.yml:china
+      - edition.yml:enterprise.premium
+----
 
-==== Render Build Settings
+==== Render Build Settings Overview
 
-Certain AsciiDoc settings are determinant enough that they can be set using parameters in the build config.
-Establishing these as per-build settings in your config file file will override anywhere else they are set, except on the command line.
+Certain AsciiDoc/Asciidoctor settings are determinant enough that they can be set using parameters in the build config.
+Establishing these as per-build settings in your config file will override anywhere else they are set, except on the command line.
+
+[IMPORTANT]
+These settings do not necessarily have 1:1 correspondence to AsciiDoc(tor) attributes.
 
 output::
 The filename for saving rendered content.
-This build setting is required for render operations.
+This build setting is required for render operations that generate a single file.
+Static site generation renders, however, target a directory set in the SSG's config.
+
+backend::
+The backend determines the rendering context.
+When building single-file output, the backend is typically determined from the *output* filename and/or the *doctype*.
+Some renderers, such as Jekyll, require specific backend designations (`jekyll`).
+Valid options are `html5`, `pdf`, `jekyll`, with more to come.
 
 doctype::
 Overrides *doctype* attribute.
@@ -696,13 +801,26 @@ Generates an article-formatted document in PDF, HTML, or ePub.
 `manpage`:::
 Generates Linux man page format.
 
-`slideshow`:::
+`deck`:::
 Generates an HTML/JavaScript slide deck. (Not yet implemented.)
 
 `style`::
 Points either to a YAML configuration for PDF styles or a CSS stylesheet for HTML rendering.
 
-// === Deploy Operations
+properties::
+Designate a file or files for settings and additional explicit settings at the build level.
+See <<per-build-properties-files>>.
+
+=== Deploy Operations
+
+It's not clear how deeply we will delve into deploy operations, since other build systems (such as rake) would seem far more suitable.
+For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving.
+
+For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
+This will attempt to serve files from the *destination* set for the associated Jekyll build.
+
+[WARNING]
+Deployment of Jekyll sites is both limited and untested under nonstandard conditions.
 
 === Config Settings Matrix
 
@@ -760,7 +878,19 @@ s| builds
 s| output
 | Required
 | N/A
-| Required
+| Optional*
+|
+
+s| backend
+| N/A
+| N/A
+| Optional
+|
+
+s| config
+| N/A
+| N/A
+| Optional
 |
 
 s| template
@@ -780,7 +910,15 @@ s| attributes
 | N/A
 | Optional
 |
+
+s| properties
+| N/A
+| N/A
+| Optional
+|
 |===
+
+pass:[*]The `output` setting is considered optional for render operations because static site generations target a directory set in the SSG's config file.
 // end::options-table[]
 
 == Meta
@@ -807,7 +945,7 @@ I intend to experiment with other toolchains, datasource types, and template eng
 // tag::contributing[]
 Contributions are very welcome.
 
-This repo is maintained by the former Technical Documentation Manager at Rocana (formerly ScalingData, now mostly acquired by Splunk),which is the original copyright holder of LiquiDoc.
+This repo is maintained by the former Technical Documentation Manager at Rocana (formerly ScalingData, now mostly acquired by Splunk), which is the original copyright holder of LiquiDoc.
 I am teaching myself basic Ruby scripting just to code LiquiDoc and related tooling.
 Therefore, *instructional pull requests are encouraged*.
 I have no ego around the code itself.
