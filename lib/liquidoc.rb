@@ -9,6 +9,7 @@ require 'logger'
 require 'csv'
 require 'crack/xml'
 require 'fileutils'
+require "jekyll"
 
 # ===
 # Table of Contents
@@ -32,6 +33,8 @@ require 'fileutils'
 
 @base_dir_def = Dir.pwd + '/'
 @base_dir = @base_dir_def
+@build_dir_def = @base_dir + '_build'
+@build_dir = @build_dir_def
 @configs_dir = @base_dir + '_configs'
 @templates_dir = @base_dir + '_templates/'
 @data_dir = @base_dir + '_data/'
@@ -43,12 +46,20 @@ require 'fileutils'
 @attributes = {}
 @passed_attrs = {}
 @verbose = false
+@quiet = false
+@explicit = false
 
+# Instantiate the main Logger object, which is always running
 @logger = Logger.new(STDOUT)
-@logger.level = Logger::INFO
 @logger.formatter = proc do |severity, datetime, progname, msg|
   "#{severity}: #{msg}\n"
 end
+@logger.level = Logger::INFO # suppresses DEBUG-level messages
+
+
+FileUtils::mkdir_p("#{@build_dir}") unless File.exists?("#{@build_dir}")
+FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
+
 
 # ===
 # Executive procs
@@ -77,6 +88,7 @@ def iterate_build cfg
   for step in cfg.steps # iterate through each node in the 'config' object, which should start with an 'action' parameter
     stepcount = stepcount + 1
     step = BuildConfigStep.new(step) # create an instance of the Action class, validating the top-level step hash (now called 'step') in the process
+    @explainer.info step.message
     type = step.type
     case type # a switch to evaluate the 'action' parameter for each step in the iteration...
     when "parse"
@@ -85,6 +97,7 @@ def iterate_build cfg
       for bld in builds
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
+          @explainer.info build.message
           liquify(data, build.template, build.output) # perform the liquify operation
         else
           regurgidata(data, build.output)
@@ -96,12 +109,14 @@ def iterate_build cfg
       copy_assets(step.source, step.target, inclusive)
     when "render"
       validate_file_input(step.source, "source") if step.source
-      doc = AsciiDocument.new(step.source)
-      attrs = ingest_attributes(step.data) if step.data # Set attributes in from YAML files
-      doc.add_attrs!(attrs) # Set attributes from the action-level data file
       builds = step.builds
       for bld in builds
+        doc = AsciiDocument.new(step.source)
+        attrs = ingest_attributes(step.data) if step.data # Set attributes from from YAML files
+        doc.add_attrs!(attrs) # Set attributes from the action-level data file
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type' string
+        build.set("backend", derive_backend(doc.type, build.output) ) unless build.backend
+        @explainer.info build.message
         render_doc(doc, build) # perform the render operation
       end
     when "deploy"
@@ -143,6 +158,27 @@ def validate_config_structure config
     end
   end
 # TODO More validation needed
+end
+
+def explainer_init out=nil
+  unless @explainer
+    if out == "STDOUT"
+      @explainer = Logger.new(STDOUT)
+    else
+      out = "#{@build_dir}/pre/config-explainer.adoc" if out.nil?
+      File.open(out, 'w') unless File.exists?(out)
+      file = File.open(out, File::WRONLY)
+      begin
+        @explainer = Logger.new(file)
+      rescue Exception => ex
+        @logger.error ex
+        raise "ExplainerCreateError"
+      end
+    end
+    @explainer.formatter = proc do |severity, datetime, progname, msg|
+      "#{msg}\n"
+    end
+  end
 end
 
 # ===
@@ -211,8 +247,57 @@ class BuildConfigStep
     return @step['options']
   end
 
+  def stage
+    return @step['stage']
+  end
+
   def builds
     return @step['builds']
+  end
+
+  def message
+    # dynamically build a human-friendly log message, possibly appending a reason
+    unless @step['message']
+      reason = ", #{@step['reason']}" if @step['reason']
+      noninclusively = ", without carrying the parent directory" if self.options.is_a?(Hash) && self.options['inclusive'] == false && File.directory?(self.source)
+      stage = "" ; stage = "[#{self.stage}] " if self.stage
+      case self.type
+      when "migrate"
+        text = ". #{stage}Copies `#{self.source}` to `#{self.target}`#{noninclusively}#{reason}."
+      when "parse"
+        if self.data.is_a? Array
+          if self.data.count > 1
+            text = ". Draws data from the following files:"
+            self.data.each do |file|
+              text.concat("\n  * `#{file}`.")
+            end
+            text.concat("\n")
+          else
+            text = ". #{stage}Draws data from `#{self.data[0]}`"
+          end
+        else
+          text = ". #{stage}Draws data from `#{self.data['file']}`"
+        end
+        text.concat("#{reason},") if reason
+        text.concat(" and parses it as follows:")
+        return text
+      when "render"
+        if self.source
+          text = ". #{stage}Using the index file `#{self.source}` as a map#{reason}, and ingesting AsciiDoc attributes from "
+          if self.data.is_a? Array
+            text.concat("the following data files:")
+            self.data.each do |file|
+              text.concat("\n  * `#{file}`.")
+            end
+          else
+            text.concat("`#{self.data}`")
+          end
+          return text
+        end
+      end
+    else
+      return @step['message']
+    end
   end
 
   def validate
@@ -265,6 +350,42 @@ class Build
 
   def props
     @build['props']
+  end
+
+  def message
+    # dynamically build a message, possibly appending a reason
+    unless @build['message']
+      reason = ", #{@build['reason']}" if @build['reason']
+      case @type
+      when "parse"
+        text = ".. Builds `#{self.output}` pressed with the template `#{self.template}`#{reason}."
+      when "render"
+        case self.backend
+        when "pdf"
+          text = ".. Uses Asciidoctor/Prawn to generate a PDF file `#{self.output}`"
+          text.concat("#{reason}") if reason
+          text.concat(".")
+        when "html5"
+          text = ".. Compiles a standard Asciidoctor HTML5 file, `#{self.output}`"
+          text.concat("#{reason}") if reason
+          text.concat(".")
+        when "jekyll"
+          text = ".. Uses Jekyll config files:\n+\n--"
+          self.props['files'].each_with_index do |file, index|
+            text.concat("\n  * `#{file}`")
+          end
+          text.concat("\n\nto generate a static site")
+          if self.props && self.props['arguments']
+            text.concat(" at `#{self.props['arguments']['destination']}`")
+          end
+          text.concat("#{reason}") if reason
+          text.concat(".\n--\n")
+        end
+        return "#{text}"
+      end
+    else
+      @build['message']
+    end
   end
 
   def prop_files_array
@@ -333,7 +454,7 @@ class Build
     end
   end
 
-end #class Build
+end # class Build
 
 class DataSrc
   # initialization means establishing a proper hash for the 'data' param
@@ -355,8 +476,12 @@ class DataSrc
     else
       if datasrc.is_a? String
         @datasrc['ext'] = File.extname(datasrc)
-      else # datasrc is neither string nor hash
-        raise "InvalidDataSource"
+      else
+        if datasrc.is_a? Array
+
+        else
+          raise "InvalidDataSource"
+        end
       end
     end
   end
@@ -546,7 +671,7 @@ def liquify datasrc, template_file, output
       raise "FileNotBuilt"
     end
     if File.exists?(output_file)
-      @logger.info "File built: #{File.basename(output_file)}"
+      @logger.info "File built: #{output_file}"
     else
       @logger.error "Hrmp! File not built."
       raise "FileNotBuilt"
@@ -657,7 +782,6 @@ def derive_backend type, out_file
 end
 
 def render_doc doc, build
-  build.set("backend", derive_backend(doc.type, build.output) ) unless build.backend
   case build.backend
   when "html5", "pdf"
     asciidocify(doc, build)
@@ -734,15 +858,15 @@ def generate_site doc, build
     attrs.merge!(build.attributes) if build.attributes
     attrs = {"asciidoctor" => {"attributes" => attrs} }
     attrs_yaml = attrs.to_yaml # Convert it all back to Yaml, as we're going to write a file to feed back to Jekyll
-    FileUtils::mkdir_p("build/pre") unless File.exists?("build/pre")
-    File.open("build/pre/_attributes.yml", 'w') { |file| file.write(attrs_yaml) }
-    build.add_config_file("build/pre/_attributes.yml")
+    File.open("#{@build_dir}/pre/_attributes.yml", 'w') { |file| file.write(attrs_yaml) }
+    build.add_config_file("#{@build_dir}/pre/_attributes.yml")
     config_list = build.prop_files_array.join(',') # flatten the Array back down for the CLI
     opts_args = ""
+    quiet = "--quiet" if @quiet || @explicit
     if build.props['arguments']
       opts_args = build.props['arguments'].to_opts_args
     end
-    command = "bundle exec jekyll build --config #{config_list} #{opts_args}"
+    command = "bundle exec jekyll build --config #{config_list} #{opts_args} #{quiet}"
   end
   @logger.info "Running #{command}"
   @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
@@ -839,6 +963,8 @@ end
 
 # Extending Liquid filters/text manipulation
 module CustomFilters
+  include Jekyll::Filters
+
   def plainwrap input
     input.wrap
   end
@@ -875,7 +1001,7 @@ Liquid::Template.register_filter(CustomFilters)
 command_parser = OptionParser.new do|opts|
   opts.banner = "Usage: liquidoc [options]"
 
-  opts.on("-a KEY=VALUE", "For passing an AsciiDoc attribute parameter to Asciidoctor. Ex: -a basedir=some/path -a custom_var='my value'") do |n|
+  opts.on("-a KEY=VALUE", "For passing an AsciiDoc attribute parameter to Asciidoctor. Ex: -a imagesdir=some/path -a custom_var='my value'") do |n|
     pair = {}
     k,v = n.split('=')
       pair[k] = v
@@ -884,7 +1010,11 @@ command_parser = OptionParser.new do|opts|
 
   # Global Options
   opts.on("-b PATH", "--base=PATH", "The base directory, relative to this script. Defaults to `.`, or pwd." ) do |n|
-    @data_file = @base_dir + n
+    @base_dir = n
+  end
+
+  opts.on("-B PATH", "--build=PATH", "The directory under which LiquiDoc should save automatically preprocessed files. Defaults to #{@base_dir}_build. Can be absolute or relative to the base path (-b/--base=). Do NOT append '/' to the build path." ) do |n|
+    @build_dir = n
   end
 
   opts.on("-c", "--config=PATH", "Configuration file, enables preset source, template, and output.") do |n|
@@ -911,17 +1041,25 @@ command_parser = OptionParser.new do|opts|
     @template_file = @base_dir + n
   end
 
-  opts.on("--verbose", "Run verbose") do |n|
+  opts.on("--verbose", "Run verbose debug logging.") do |n|
     @logger.level = Logger::DEBUG
     @verbose = true
   end
 
-  opts.on("--stdout", "Puts the output in STDOUT instead of writing to a file.") do
-    @output_type = "stdout"
+  opts.on("--quiet", "Run with only WARN- and error-level logs written to console.") do |n|
+    @logger.level = Logger::WARN
+    @quiet = true
   end
 
-  opts.on("--clean PATH", "Force deletes the designated directory and all its contents WITHOUT WARNING.") do |n|
-    @clean_dir = n
+  opts.on("--explicit", "Log explicit step descriptions to console as build progresses. (Otherwise writes to file at #{@build_dir}/pre/config-explainer.adoc .)") do |n|
+    explainer_init("STDOUT")
+    @explainer.level = Logger::INFO
+    @logger.level = Logger::WARN # Suppress all those INFO-level messages
+    @explicit = true
+  end
+
+  opts.on("--stdout", "Puts the output in STDOUT instead of writing to a file.") do
+    @output_type = "stdout"
   end
 
   opts.on("--deploy", "EXPERIMENTAL: Trigger a jekyll serve operation against the destination dir of a Jekyll render step.") do
@@ -938,21 +1076,21 @@ end
 command_parser.parse!
 
 # Upfront debug output
-@logger.debug "Base dir: #{@base_dir}"
-@logger.debug "Config file: #{@config_file}"
+@logger.debug "Base dir: #{@base_dir} (The path from which LiquiDoc CLI commands are relative.)"
+
+explainer_init
 
 # ===
 # Execute
 # ===
-if @clean_dir
-  FileUtils.remove_dir(@clean_dir)
-end
+
 unless @config_file
+  @logger.debug "Executing config-free build based on API/CLI arguments alone."
   if @data_file
     liquify(@data_file, @template_file, @output_file)
   end
   if @index_file
-    @logger.warn "Publishing via command line arguments not yet implemented. Use a config file."
+    @logger.warn "Rendering via command line arguments is not yet implemented. Use a config file."
   end
 else
   @logger.debug "Executing... config_build"

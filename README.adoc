@@ -1,6 +1,6 @@
 = LiquiDoc
 // tag::overview[]
-LiquiDoc enables true single-sourcing of technical content and data.
+LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
 It is especially suited for documentation projects with various required output formats, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
 The highly configurable command-line utility engages template engines to parse complex data into rich text output, from *blogs* to *books* to *knowledge bases* to *slide presentations*.
 
@@ -22,22 +22,24 @@ More below under <<Contributing>> and <<License>>.
 == Purpose
 // tag::purpose[]
 LiquiDoc is a build tool for documentation projects or for the documentation component of a larger project.
-Unlike tools that are mere converters, LiquiDoc can be easily configured to perform multiple consecutive routines for generating content from multiple data source files, each output in various formats based on distinct templates.
-It can be integrated into build- and package-management systems.
+Unlike tools that are mere converters, LiquiDoc can be easily configured to perform multiple consecutive routines for generating content from multiple data/content source files, each output in various formats based on distinct templates and themes.
+It can be integrated into build- and package-management systems and deployed for continuous integration (CI).
 
 The tool currently provides for very basic configuration of build jobs.
+The gem does not have a formalized Ruby API yet, but the command-line interface and configuration options are very powerful together.
 From any given data file, multiple template-driven parsing operations can be performed to produce totally different output formats from the same dataset.
+Build configurations enable such operations from a single command.
 
 === Single-sourcing Docs _and_ Code
 
-In order to achieve true single sourcing, a data source file in the simplest, most manageable format applicable to the job and preferred by the team, can serve as the canonical authority.
-But rather than using this file as a mere _reference_ like most docs, every stakeholder on the team can draw from it programmatically.
-Feature teams who need structured data in different formats can read the semi-structured source file from a common location and parse it using native libraries.
+A datasource file in the simplest, most manageable format applicable to the job and preferred by the team can serve as the canonical authority.
+But rather than using this file as a mere _reference_ like most docs, every stakeholder on the team can draw from it _programmatically_.
+Feature teams that need structured data in different formats can read the semi-structured source file from a common location in the repository and parse it using native libraries.
 Alternatively, LiquiDoc can parse it into a generated source file during the product build procedure and save a copy in the target/build tree for the application build to pick up.
 
 === Coming Soon
 
-Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files to ePub and even HTML/JavaScript slide presentations, as well as integrated AsciiDoc- or Markup-based Jekyll static website generation.
+Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files to ePub and even HTML/JavaScript slide presentations.
 
 See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
 // end::purpose[]
@@ -116,7 +118,7 @@ Add `--verbose` to see the steps LiquiDoc is taking.
 === Configuration
 // tag::configuration[]
 The best way to use LiquiDoc is with a configuration file.
-This not only makes the command line much easier to manage (requiring just a configuration file path argument), it also adds the ability to perform more complex builds.
+This not only makes the command line much easier to manage (requiring just a configuration file path argument), it also adds the ability to perform more complex builds and manage them with source control.
 
 Here is the basic structure of a valid config file:
 
@@ -163,6 +165,7 @@ Can also be `stdout`.
       output: _output/output_file.html
     - template: liquid_template.markdown
       output: _output/output_file.md
+  stage: parse-my-file # <5>
 ----
 
 <1> In this format, the *data* setting contains several other settings.
@@ -176,9 +179,12 @@ It can also be set to `yml`, `json`, `xml`, or `csv` if your file is in one of t
 <4> If your type is `regex`, you must supply a regular expression pattern.
 This pattern will be applied to each line of the file, scanning for matches to turn into key-value pairs.
 Your pattern must contain at least one group, denoted with unescaped `(` and `)` markers designating a “named group”, denoted with `?<string>`, where `string` is the name for the variable to assign to any content matching the pattern contained in the rest of the group (everything else between the unescaped parentheses.).
+
+<5> _Optionally_, you can tag any top-level step with a label.
+This will be expressed <<self-documenting-configuration,during logging>>, and eventually it will enable us to suppress or reorder steps by name (see link:https://github.com/DocOps/liquidoc-gem/issues/33[Issue #33]).
 ****
 
-When you have established a configuration file, you can call it with the argument `-c`/`--config` on the command line.
+When you have established a configuration file, you can call it with the option `-c` on the command line.
 
 .Example -- Generate sample output from files established in a configuration
 ----
@@ -186,7 +192,7 @@ bundle exec liquidoc -c _configs/cfg-sample.yml --stdout
 ----
 
 [TIP]
-Repeat without the `--stdout` flag and you'll find the generated files in `_output/`, as defined in the configuration.
+Repeat without the `--stdout` flag, and you'll find the generated files in `_build/`, as defined in the configuration.
 
 // tag::configuration[]
 
@@ -605,6 +611,10 @@ But Asciidoctor renderings can be configured and manipulated by _attribute_ sett
 Basically, we are trying to maximize our readiness to ingest document data and build properties from a wide range of sources.
 This way inline substitutions can be made out of data living outside the source tree of any particular document, passed into the document build in the form of YAML data converted into -- you guessed it -- AsciiDoc _attributes_.
 
+[NOTE]
+AsciiDoc attributes are not the same as Asciidoctor configuration properties.
+While both kinds create substitutions that are expressed the same way (`{property_name}`), they are set differently in your LiquiDoc configuration.
+
 LiquiDoc provides several means for adding attributes to your documents, in addition to the ways you might be used to setting attributes (inside your docfiles and command line).
 They are listed below _in the order of assignment/substitution_.
 Therefore, an identical value defined explicitly in each subsequent space will overwrite any set in the previous stages.
@@ -867,6 +877,12 @@ s| options
 | Optional
 |
 
+s| stage
+| Optional
+| Optional
+| Optional
+|
+
 s| builds
 | Required
 | N/A
@@ -920,6 +936,93 @@ s| properties
 
 pass:[*]The `output` setting is considered optional for render operations because static site generations target a directory set in the SSG's config file.
 // end::options-table[]
+
+== Configuring a LiquiDoc Build
+
+In order to seriously explore and instruct this tool's ability to single-source a product's entire docs-integrated codebase, I have set out on a project for LiquiDoc to eat its own proverbial dog food.
+That is, I'm using LiquiDoc to document LiquiDoc in a separate repository -- one which treats the LiquiDoc gem repository (_this_ repo) as a Git submodule.
+That is, for purposes of coding, _all_ of the *liquidoc-gem* repo's code is accesible by way of an alias path, `products/liquidoc-gem`, from the base of the *liquidoc-docs* project.
+
+=== Gem Repo as Submodule
+
+I am on record as prefering to _keep docs source in the same codebase as that of the product they reference_.
+I've used some version of that statement in almost everything I write on the matter.
+Yet there are plenty of reasons I can think of that strongly favor the product-as-submodule approach.
+I will explore other cases in _Codewriting_, but my reason in the case of LiquiDoc and its own docs is simply to avoid confusion between the utility and the docs.
+Call it ironic, but other than this README, you won't find LiquiDoc's documentation source inside its product repo.
+
+But you will sort of find the product repo inside the docs repo, where the former's source can be used to inform content and build configurations alike.
+My intention is to establish a single source of truth among the two repos.
+
+I'll leave it to the link:https://github.com/DocOps/ldcmf-guides[LDCMF Guides README] to take it from here.
+That's where you'll find a more detailed project overview.
+
+On a final note, this means I will begin moving content from this README (where it sits like a static blob) into the highly dynamic LiquiDoc Docs project.
+Other content will simply be `include::[]`ed into the project via that smuggling tunnel of a submodule.
+
+[[self-documenting-configuration]]
+=== Self-Documenting Configuration
+
+An unscheduled feature started to make a lot of sense as I built the LiquiDoc project.
+For non-geniuses like myself, it can be really helpful to have a plain-English accounting of what is happening during a build procedure.
+I don't know if any other build utilities have a facility like this, but I added it with minimal effort (after getting over some abstract challenges I'll talk about elsewhere).
+
+I added some code to this gem that creates a secondary log as a LiquiDoc build iterates through a configuration file.
+If you add no new fields to your build config's YAML file, this secondary logger will still generate a plain-language description of the steps it is taking.
+By default these are written to a file stored under your build directory (`_build/pre/config-explainer.adoc` unless otherwise established).
+This file can be included into the build.
+
+Alternatively, the log will print to screen (console) during a configured LiquiDoc build procedure.
+Simply add the `--explicit` flag to your command.
+
+.Example
+[source,bash]
+----
+bundle exec liquidoc -c _configs/build-docs.yml --explicit
+----
+
+This feature will explain which sources are used to produce what output, but it won't say why.
+LiquiDoc administrator's can state the purpuse of each action step and each build sub-step.
+There are two ways to intervene with the automated log message.
+
+message::
+Add a custom `message:` key.
+The contents of this parameter will appear _instead of_ the automated message.
+
+reason::
+The reason will be integrated with the automated message (it's moot with a custom message as described above).
+Usually it will be appended as a comma-demarcated phrase at the end of the automated statement or in a sensible place in the middle.
+
+.Example from LDCMF Guides `_configs/build-docs.yml`
+[source,yaml]
+----
+- action: migrate
+  source: theme/
+  target: _build/
+  reason: so theme/ dir will be subordinate to the SSG source path
+- action: parse
+  data: data/product.yml
+  message: . Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
+  builds:
+    - template: _templates/liquid/index-by-user-stories.asciidoc
+      output: _build/_built_index-stories.adoc
+      message: |
+        .. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
+----
+
+[TIP]
+In custom `message:` fields, adding AsciiDoc ordered-list markup maintains the ordered lists this feature generates.
+You may also use bullets (`*`), add styling directives or other markers, etc.
+
+.Post-render output
+====
+. Copies `theme/` to `_build/`, so theme/ dir will be subordinate to the SSG source path.
+. Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
+.. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
+====
+
+Let me know if you find this “configuration explainer” feature useful.
+There are definitely some enhancements I could add to it, but I'm calling it a minimum-viable product for now.
 
 == Meta
 // tag::meta[]
