@@ -98,7 +98,7 @@ def iterate_build cfg
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
           @explainer.info build.message
-          liquify(data, build.template, build.output) # perform the liquify operation
+          liquify(data, build.template, build.output, build.variables) # perform the liquify operation
         else
           regurgidata(data, build.output)
         end
@@ -350,6 +350,10 @@ class Build
 
   def props
     @build['props']
+  end
+
+  def variables
+    @build['variables']
   end
 
   def message
@@ -647,9 +651,12 @@ def parse_regex data_file, pattern
 end
 
 # Parse given data using given template, generating given output
-def liquify datasrc, template_file, output
+def liquify datasrc, template_file, output, variables=nil
   data = get_data(datasrc)
   validate_file_input(template_file, "template")
+  if variables
+    data = { "data" => data, "vars" => variables }
+  end
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
