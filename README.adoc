@@ -47,10 +47,13 @@ See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenh
 // tag::installation[]
 == Installation
 
+// tag::ruby-install-notice[]
 [NOTE]
 Your system must be running Ruby 2.3 or later.
 Linux and MacOS users should be okay.
 See https://rubyinstaller.org/downloads[rubyinstaller.org] if you're on Windows.
+
+// end::ruby-install-notice[]
 
 . Create a file called `Gemfile` in your project's root directory.
 
@@ -515,7 +518,6 @@ As you can see, the `vars` scope supports nested structures; it's just more YAML
 After this parsing, files are written in any of the given output formats, or else just written to system as STDOUT (when you add the `--stdout` flag to your command or set `output: stdout` in your config file).
 Liquid templates can be used to produce any flat-file format imaginable.
 Just format valid syntax with your source data and Liquid template, then save with the proper extension, and you're all set.
-// end::usage[]
 
 === Migrate Operations
 
@@ -643,9 +645,10 @@ This is established in your build-config block
 ----
 
 The *backend* designation of `jekyll` is required, and at least one file under *properties* > *files* is strongly encouraged for proper Jekyll behavior.
-LiquiDoc will write an additional YAML file containing all of the AsciiDoc attributes, which will be appended to this list when the build command is run, thus capturing attributes offerd up in the action-level *data* file and the *arguments* block in the .
+LiquiDoc will write an additional YAML file containing all of the AsciiDoctor attributes, to be appended to this list when the build command is run.
+This captures attributes offered up in the action-level *data* file and in the *attributes* section of the *build* step.
 
-The *arguments* block is made up of key-value parameters that establish or override any Jekyll config settings.
+The *arguments* block is made up of key-value parameters that establish or override any _Jekyll_ config settings.
 
 [NOTE]
 The action-level parameter *source* is left blank in this example.
@@ -1083,6 +1086,8 @@ You may also use bullets (`*`), add styling directives or other markers, etc.
 
 Let me know if you find this “configuration explainer” feature useful.
 There are definitely some enhancements I could add to it, but I'm calling it a minimum-viable product for now.
+
+// end::usage[]
 
 == Meta
 // tag::meta[]
