@@ -655,12 +655,13 @@ def liquify datasrc, template_file, output, variables=nil
   data = get_data(datasrc)
   validate_file_input(template_file, "template")
   if variables
-    data = { "data" => data, "vars" => variables }
+    vars = { "vars" => variables }
+    input = data.merge!vars
   end
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
-    rendered = template.render(data) # renders the output
+    rendered = template.render(input) # renders the output
   rescue Exception => ex
     message = "Problem rendering Liquid template. #{template_file}\n" \
       "#{ex.class} thrown. #{ex.message}"
