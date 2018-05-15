@@ -375,7 +375,19 @@ class Build
           text.concat(".")
         when "jekyll"
           text = ".. Uses Jekyll config files:\n+\n--"
-          self.props['files'].each_with_index do |file, index|
+          files = self.props['files']
+          if files.is_a? String
+            if files.include? ","
+              files = files.split(",")
+            else
+              files = files.split
+            end
+          else
+            unless files.is_a? Array
+              @logger.error "The Jekyll configuration file must be a single filename, a comma-separated list of filenames, or an array of filenames."
+            end
+          end
+          files.each do |file|
             text.concat("\n  * `#{file}`")
           end
           text.concat("\n\nto generate a static site")
@@ -385,7 +397,7 @@ class Build
           text.concat("#{reason}") if reason
           text.concat(".\n--\n")
         end
-        return "#{text}"
+        return text
       end
     else
       @build['message']
