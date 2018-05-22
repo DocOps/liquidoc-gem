@@ -47,10 +47,13 @@ See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenh
 // tag::installation[]
 == Installation
 
+// tag::ruby-install-notice[]
 [NOTE]
 Your system must be running Ruby 2.3 or later.
 Linux and MacOS users should be okay.
 See https://rubyinstaller.org/downloads[rubyinstaller.org] if you're on Windows.
+
+// end::ruby-install-notice[]
 
 . Create a file called `Gemfile` in your project's root directory.
 
@@ -461,12 +464,57 @@ A_B A thing that *SnASFHE&"\|+1Dsaghf true
 G_H Some text for &hdf 1t`F false
 ----
 
+==== Passing Additional Variables
+
+Parse operations accept fixed variables, passed as a structure called `variables:` in the config.
+
+[source,yaml]
+.Example config -- Passing additional variables into a parse action
+----
+- action: parse
+  data: schema.yml
+  builds:
+    - template: _templates/side-nav.html
+      output: _output/side-nav.html
+      variables:
+        environment: staging
+        product:
+          version: 2.1.0
+          locale: en-US
+    - template: _templates/side-nav.html
+      output: _output/side-nav.html
+      variables:
+        environment: production
+        product:
+          version: 2.1.0
+          locale: en-US
+----
+
+Now templates can use `vars.environment` to call these additional variables.
+
+[source,liquid]
+.Example Liquid template (`side-nav.html`) with variables passed
+----
+{% if vars.environment == "staging" %}
+{% assign base_url = "http://staging.int.example.com" %}
+{% else %}
+{% assign base_url = "http://example.com" %}
+{% endif %}
+LiquiDoc {{ vars.product.version }}
+<ul class="nav">
+{% for page in data.pages %}
+<li><a href="{{ base_url }}/{{ page.path  }}">{{ page.name }}</a>
+{% endfor %}
+</ul>
+----
+
+As you can see, the `vars` scope supports nested structures; it's just more YAML like your data files, just called out per-build in the configuration.
+
 ==== Output
 
 After this parsing, files are written in any of the given output formats, or else just written to system as STDOUT (when you add the `--stdout` flag to your command or set `output: stdout` in your config file).
 Liquid templates can be used to produce any flat-file format imaginable.
 Just format valid syntax with your source data and Liquid template, then save with the proper extension, and you're all set.
-// end::usage[]
 
 === Migrate Operations
 
@@ -493,7 +541,7 @@ It will only recreate the contents of the source directory, not the directory pa
 When both the source and target paths are directories and inclusive is `true`, the files are copied to `target/source/`.
 When inclusive is `false`, they copy to `target/`.
 
-Individual files must be listed in individual steps at this time, one per step, as in the second step.
+Individual files must be listed in individual steps at this time, one per step, as in the second step above.
 
 === Render Operations
 
@@ -594,13 +642,14 @@ This is established in your build-config block
 ----
 
 The *backend* designation of `jekyll` is required, and at least one file under *properties* > *files* is strongly encouraged for proper Jekyll behavior.
-LiquiDoc will write an additional YAML file containing all of the AsciiDoctor attributes will be appended to this list when the build command is run, thus capturing attributes offerd up in the action-level *data* file and the *arguments* block in the .
+LiquiDoc will write an additional YAML file containing all of the AsciiDoctor attributes, to be appended to this list when the build command is run.
+This captures attributes offered up in the action-level *data* file and in the *attributes* section of the *build* step.
 
-The *arguments* block is made up of key-value parameters that establish or override any Jekyll config settings.
+The *arguments* block is made up of key-value parameters that establish or override any _Jekyll_ config settings.
 
 [NOTE]
 The action-level parameter *source* is left blank in this example.
-This setting is _cannot_ be used to designate a Jekyll source path.
+This setting _cannot_ be used to designate a Jekyll source path.
 If the above action had a second build step, such as a single output doc, the source would have relevance as the index file for that document.
 
 [[asciidoc-attributes]]
@@ -632,8 +681,8 @@ After that, we'll demonstrate even <<more-data,more ways to ingest datasets>>.
 [[asciidoc-doc-inline]]
 AsciiDoc document inline::
 The most common way to set variables is inside your AsciiDoc source files -- typically at the top of your `index.adoc` file or the equivalent.
-Any parameters set there will cascade through your files for parsing.
-This is a good place to establish defaults, but they can be overwritten by the other three means of setting AsciiDoc attributes.
+Any parameters set there will cascade through your included files for parsing.
+This is a good place to establish defaults, but they can be overwritten by the other four means of setting AsciiDoc attributes.
 +
 [source,asciidoc]
 .Example -- Setting AsciiDoc attributes inline
@@ -767,9 +816,9 @@ You may designate a specific block in your data file by designating it with a co
     files: asciidoc.yml,product.yml:settings.attributes
 ----
 +
-Here we see `,` used as a delimiter between files and `:` as an indicator that a variable indicator follows.
+Here we see `,` used as a delimiter between files and `:` as an indicator that a block designator follows.
 In this case, the render action will load the `settings.attributes` block from the `product.yml` file.
-+
+
 .Example -- Designating data blocks within a properties files
 [source,yaml]
 ----
@@ -778,6 +827,8 @@ In this case, the render action will load the `settings.attributes` block from t
       - countries.yml:china
       - edition.yml:enterprise.premium
 ----
+
+In this last case, we're passing locale settings for a premium edition targeted to a Chinese audience.
 
 ==== Render Build Settings Overview
 
@@ -817,8 +868,11 @@ Generates an HTML/JavaScript slide deck. (Not yet implemented.)
 `style`::
 Points either to a YAML configuration for PDF styles or a CSS stylesheet for HTML rendering.
 
+variables::
+Designate one or more nested variables alongside ingested data in parse actions.
+
 properties::
-Designate a file or files for settings and additional explicit settings at the build level.
+Designates a file or files for settings and additional explicit configuration at the build level for render actions.
 See <<per-build-properties-files>>.
 
 === Deploy Operations
@@ -927,6 +981,12 @@ s| attributes
 | Optional
 |
 
+s| variables
+| Optional
+| N/A
+| N/A
+|
+
 s| properties
 | N/A
 | N/A
@@ -999,7 +1059,7 @@ Usually it will be appended as a comma-demarcated phrase at the end of the autom
 - action: migrate
   source: theme/
   target: _build/
-  reason: so theme/ dir will be subordinate to the SSG source path
+  reason: so `theme/` dir will be subordinate to the SSG source path
 - action: parse
   data: data/product.yml
   message: . Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
@@ -1011,7 +1071,7 @@ Usually it will be appended as a comma-demarcated phrase at the end of the autom
 ----
 
 [TIP]
-In custom `message:` fields, adding AsciiDoc ordered-list markup maintains the ordered lists this feature generates.
+In custom `message:` fields, adding AsciiDoc ordered-list markup maintains the ordered lists this feature generates by for automated steps (the ones where you don't explicitly declare a `message:`).
 You may also use bullets (`*`), add styling directives or other markers, etc.
 
 .Post-render output
@@ -1023,6 +1083,8 @@ You may also use bullets (`*`), add styling directives or other markers, etc.
 
 Let me know if you find this “configuration explainer” feature useful.
 There are definitely some enhancements I could add to it, but I'm calling it a minimum-viable product for now.
+
+// end::usage[]
 
 == Meta
 // tag::meta[]

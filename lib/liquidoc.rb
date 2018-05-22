@@ -9,7 +9,7 @@ require 'logger'
 require 'csv'
 require 'crack/xml'
 require 'fileutils'
-require "jekyll"
+require 'jekyll'
 
 # ===
 # Table of Contents
@@ -98,7 +98,7 @@ def iterate_build cfg
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
           @explainer.info build.message
-          liquify(data, build.template, build.output) # perform the liquify operation
+          liquify(data, build.template, build.output, build.variables) # perform the liquify operation
         else
           regurgidata(data, build.output)
         end
@@ -352,6 +352,10 @@ class Build
     @build['props']
   end
 
+  def variables
+    @build['variables']
+  end
+
   def message
     # dynamically build a message, possibly appending a reason
     unless @build['message']
@@ -371,7 +375,19 @@ class Build
           text.concat(".")
         when "jekyll"
           text = ".. Uses Jekyll config files:\n+\n--"
-          self.props['files'].each_with_index do |file, index|
+          files = self.props['files']
+          if files.is_a? String
+            if files.include? ","
+              files = files.split(",")
+            else
+              files = files.split
+            end
+          else
+            unless files.is_a? Array
+              @logger.error "The Jekyll configuration file must be a single filename, a comma-separated list of filenames, or an array of filenames."
+            end
+          end
+          files.each do |file|
             text.concat("\n  * `#{file}`")
           end
           text.concat("\n\nto generate a static site")
@@ -381,7 +397,7 @@ class Build
           text.concat("#{reason}") if reason
           text.concat(".\n--\n")
         end
-        return "#{text}"
+        return text
       end
     else
       @build['message']
@@ -647,9 +663,13 @@ def parse_regex data_file, pattern
 end
 
 # Parse given data using given template, generating given output
-def liquify datasrc, template_file, output
+def liquify datasrc, template_file, output, variables=nil
   data = get_data(datasrc)
   validate_file_input(template_file, "template")
+  if variables
+    vars = { "vars" => variables }
+    data.merge!vars
+  end
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
@@ -763,7 +783,11 @@ def ingest_attributes attr_file
       raise "AttributeBlockError"
     end
     begin
-      attrs.merge!new_attrs
+      if new_attrs.is_a? Hash
+        attrs.merge!new_attrs
+      else
+        @logger.warn "The AsciiDoc attributes file #{filename} is not formatted as a hash, so its data was not ingested."
+      end
     rescue Exception => ex
       raise "AttributesMergeError #{ex.message}"
     end
