@@ -492,9 +492,6 @@ Parse operations accept fixed variables, passed as a structure called `variables
 
 Now templates can use `vars.environment` to call these additional variables.
 
-[IMPORTANT]
-In templates that use variables, data from `data:` files must be prepended by `data.` to differentiate the two sources.
-
 [source,liquid]
 .Example Liquid template (`side-nav.html`) with variables passed
 ----
