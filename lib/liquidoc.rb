@@ -9,7 +9,7 @@ require 'logger'
 require 'csv'
 require 'crack/xml'
 require 'fileutils'
-require "jekyll"
+require 'jekyll'
 
 # ===
 # Table of Contents
@@ -783,7 +783,11 @@ def ingest_attributes attr_file
       raise "AttributeBlockError"
     end
     begin
-      attrs.merge!new_attrs
+      if new_attrs.is_a? Hash
+        attrs.merge!new_attrs
+      else
+        @logger.warn "The AsciiDoc attributes file #{filename} is not formatted as a hash, so its data was not ingested."
+      end
     rescue Exception => ex
       raise "AttributesMergeError #{ex.message}"
     end
