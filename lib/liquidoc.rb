@@ -664,16 +664,18 @@ end
 
 # Parse given data using given template, generating given output
 def liquify datasrc, template_file, output, variables=nil
-  data = get_data(datasrc)
+  input = get_data(datasrc)
+  nested = { "data" => get_data(datasrc)}
+  input.merge!nested
   validate_file_input(template_file, "template")
   if variables
     vars = { "vars" => variables }
-    data.merge!vars
+    input.merge!vars
   end
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
-    rendered = template.render(data) # renders the output
+    rendered = template.render(input) # renders the output
   rescue Exception => ex
     message = "Problem rendering Liquid template. #{template_file}\n" \
       "#{ex.class} thrown. #{ex.message}"
@@ -1008,6 +1010,10 @@ module CustomFilters
     s = input.to_s.downcase
     s.gsub!(/[^a-zA-Z0-9\-_\+\/]+/i, "-")
     s
+  end
+
+  def regexreplace input, regex, replacement=''
+    input.to_s.gsub(Regexp.new(regex), replacement.to_s)
   end
 
 end
