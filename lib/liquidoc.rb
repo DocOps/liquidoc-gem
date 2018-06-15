@@ -276,7 +276,7 @@ class BuildConfigStep
             text = ". #{stage}Draws data from `#{self.data[0]}`"
           end
         else
-          text = ". #{stage}Draws data from `#{self.data['file']}`"
+          text = ". #{stage}Draws data from `#{self.data}`"
         end
         text.concat("#{reason},") if reason
         text.concat(" and parses it as follows:")
@@ -654,7 +654,7 @@ def parse_regex data_file, pattern
         end
       end
     end
-    output = {"data" => records}
+    output = records
   rescue Exception => ex
     @logger.error "Something went wrong trying to parse the free-form file. #{ex.class} thrown. #{ex.message}"
     raise "Freeform parse error"
@@ -1081,7 +1081,7 @@ command_parser = OptionParser.new do|opts|
     @quiet = true
   end
 
-  opts.on("--explicit", "Log explicit step descriptions to console as build progresses. (Otherwise writes to file at #{@build_dir}/pre/config-explainer.adoc .)") do |n|
+  opts.on("--explain", "Log explicit step descriptions to console as build progresses. (Otherwise writes to file at #{@build_dir}/pre/config-explainer.adoc .)") do |n|
     explainer_init("STDOUT")
     @explainer.level = Logger::INFO
     @logger.level = Logger::WARN # Suppress all those INFO-level messages
