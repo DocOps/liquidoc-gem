@@ -48,6 +48,8 @@ require 'jekyll'
 @verbose = false
 @quiet = false
 @explicit = false
+@search_index = false
+@search_index_dry = ''
 
 # Instantiate the main Logger object, which is always running
 @logger = Logger.new(STDOUT)
@@ -421,6 +423,18 @@ class Build
   # def prop_files_list # force the array back to a list of files (for CLI)
   #   props['files'].force_array if props['files']
   # end
+
+  def search
+    props['search']
+  end
+
+  def add_search_prop! prop
+    begin
+      self.search.merge!prop
+    rescue
+      raise "PropertyInsertionError"
+    end
+  end
 
   # NOTE this section repeats in Class.AsciiDocument
   def attributes
@@ -878,8 +892,8 @@ def generate_site doc, build
   when "jekyll"
     attrs = doc.attributes
     build.add_config_file("_config.yml") unless build.prop_files_array
-    jekyll_config = YAML.load_file(build.prop_files_array[0]) # load the first Jekyll config file locally
-    attrs.merge! ({"base_dir" => jekyll_config['source']}) # Sets default Asciidoctor base_dir to == Jekyll root
+    jekyll = load_jekyll_data(build) # load the first Jekyll config file locally
+    attrs.merge! ({"base_dir" => jekyll['source']}) # Sets default Asciidoctor base_dir to == Jekyll root
     # write all AsciiDoc attributes to a config file for Jekyll to ingest
     attrs.merge!(build.attributes) if build.attributes
     attrs = {"asciidoctor" => {"attributes" => attrs} }
@@ -892,12 +906,26 @@ def generate_site doc, build
     if build.props['arguments']
       opts_args = build.props['arguments'].to_opts_args
     end
-    command = "bundle exec jekyll build --config #{config_list} #{opts_args} #{quiet}"
+    base_args = "--config #{config_list} #{opts_args}"
+    command = "bundle exec jekyll build #{base_args} #{quiet}"
+    if @search_index
+      algolia_command = algolia_index_cli(build, base_args, jekyll)
+      command = algolia_command if algolia_command
+    end
   end
   @logger.info "Running #{command}"
   @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
   system command
   jekyll_serve(build) if @jekyll_serve
+end
+
+def load_jekyll_data build
+  data = {}
+  build.prop_files_array.each do |file|
+    settings = YAML.load_file(file)
+    data.merge!settings if settings
+  end
+  return data
 end
 
 # ===
@@ -912,6 +940,15 @@ def jekyll_serve build
   end
   command = "bundle exec jekyll serve --config #{config_file} #{opts_args} --no-watch --skip-initial-build"
   system command
+end
+
+def algolia_index_cli build, args='', jekyll={}
+  unless build.search and build.search['index']
+    @logger.warn "No index configuration found for build; Jekyll command written without Algolia."
+    return false
+  else
+    return "ALGOLIA_INDEX_NAME='#{build.search['index']}' ALGOLIA_API_KEY='#{jekyll['source']}' bundle exec jekyll algolia #{@search_index_dry} #{args} "
+  end
 end
 
 # ===
@@ -1094,6 +1131,15 @@ command_parser = OptionParser.new do|opts|
 
   opts.on("--deploy", "EXPERIMENTAL: Trigger a jekyll serve operation against the destination dir of a Jekyll render step.") do
     @jekyll_serve = true
+  end
+
+  opts.on("--search-index-push", "EXPERIMENTAL: Runs any search indexing configured in the build step and pushes to Algolia.") do
+    @search_index = true
+  end
+
+  opts.on("--search-index-dry", "EXPERIMENTAL: Runs any search indexing configured in the build step but does not push to Algolia.") do
+    @search_index = true
+    @search_index_dry = "--dry-run"
   end
 
   opts.on("-h", "--help", "Returns help.") do
