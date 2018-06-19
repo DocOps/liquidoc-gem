@@ -99,10 +99,10 @@ def config_build config_file, config_vars={}, parse=false
 end
 
 def iterate_build cfg
-  stepcount = 0
-  for step in cfg.steps # iterate through each node in the 'config' object, which should start with an 'action' parameter
-    stepcount = stepcount + 1
-    step = BuildConfigStep.new(step) # create an instance of the Action class, validating the top-level step hash (now called 'step') in the process
+  step_idx = 0
+  cfg.steps.each do |st| # iterate through each node in the 'config' object, which should start with an 'action' parameter
+    step_idx += 1
+    step = BuildConfigStep.new(st, step_idx) # create an instance of the Action class, validating the top-level step hash (now called 'step') in the process
     @explainer.info step.message
     type = step.type
     case type # a switch to evaluate the 'action' parameter for each step in the iteration...
@@ -118,13 +118,13 @@ def iterate_build cfg
           build.add_vars!(@passed_vars) unless @passed_vars.empty?
           liquify(data, build.template, build.output, build.variables) # perform the liquify operation
         else
-          regurgidata(data, build.output)
+          regurgidata(data, build.output) # execute
         end
       end
     when "migrate"
       inclusive = true
       inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
-      copy_assets(step.source, step.target, inclusive)
+      copy_assets(step.source, step.target, inclusive) # execute
     when "render"
       validate_file_input(step.source, "source") if step.source
       builds = step.builds
@@ -135,7 +135,7 @@ def iterate_build cfg
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type' string
         build.set("backend", derive_backend(doc.type, build.output) ) unless build.backend
         @explainer.info build.message
-        render_doc(doc, build) # perform the render operation
+        render_doc(doc, build) # execute the render operation
       end
     when "deploy"
       @logger.warn "Deploy actions are limited and experimental."
@@ -221,11 +221,8 @@ class BuildConfig
     if (defined?(config['compile'][0])) # The config is formatted for vesions < 0.3.0; convert it
       config = deprecated_format(config)
     end
-
     # validations
-    unless config.is_a? Array
-      raise "ConfigStructError"
-    end
+    raise "ConfigStructError" unless config.is_a? Array
 
     @cfg = config
   end
@@ -253,6 +250,14 @@ class BuildConfigStep
       raise "ConfigStructError"
     end
     validate()
+    if step['data']
+      case step['action']
+      when "parse"
+        @step['datasrc'] = DataSrc.new(step['data'])
+      when "render"
+        @step['datasrc'] = step['data']
+      end
+    end
   end
 
   def type
@@ -293,15 +298,15 @@ class BuildConfigStep
       when "migrate"
         text = ". #{stage}Copies `#{self.source}` to `#{self.target}`#{noninclusively}#{reason}."
       when "parse"
-        if self.data.is_a? Array
-          if self.data.count > 1
+        if self.datasrc.obj.is_a? Array
+          if self.datasrc.obj.count > 1
             text = ". Draws data from the following files:"
-            self.data.each do |file|
+            self.datasrc.obj.each do |file|
               text.concat("\n  * `#{file}`.")
             end
             text.concat("\n")
           else
-            text = ". #{stage}Draws data from `#{self.data[0]}`"
+            text = ". #{stage}Draws data from `#{self.datasrc[0]}`"
           end
         else
           if self.data
@@ -316,13 +321,13 @@ class BuildConfigStep
       when "render"
         if self.source
           text = ". #{stage}Using the index file `#{self.source}` as a map#{reason}, and ingesting AsciiDoc attributes from "
-          if self.data.is_a? Array
+          if self.datasrc.is_a? Array
             text.concat("the following data files:")
-            self.data.each do |file|
+            self.datasrc.each do |file|
               text.concat("\n  * `#{file}`.")
             end
           else
-            text.concat("`#{self.data}`")
+            text.concat("`#{self.datasrc}`")
           end
           return text
         end
@@ -335,7 +340,7 @@ class BuildConfigStep
   def validate
     case self.type
     when "parse"
-      reqs = ["data,builds"]
+      reqs = ["datasrc,builds"]
     when "migrate"
       reqs = ["source,target"]
     when "render"
@@ -398,19 +403,24 @@ class Build
     # dynamically build a message, possibly appending a reason
     unless @build['message']
       reason = ", #{@build['reason']}" if @build['reason']
+      bldtag = "(#{self.id})"
       case @type
       when "parse"
-        text = ".. Builds `#{self.output}` pressed with the template `#{self.template}`#{reason}."
+        if @build['template']
+          text = ".. Generates `#{self.output}` pressed with the template `#{self.template}`#{reason}. #{bldtag}"
+        else
+          text = ".. Converts the data to generate `#{self.output}`#{reason}.  #{bldtag}"
+        end
       when "render"
         case self.backend
         when "pdf"
           text = ".. Uses Asciidoctor/Prawn to generate a PDF file `#{self.output}`"
           text.concat("#{reason}") if reason
-          text.concat(".")
+          text.concat(". #{bldtag}")
         when "html5"
           text = ".. Compiles a standard Asciidoctor HTML5 file, `#{self.output}`"
           text.concat("#{reason}") if reason
-          text.concat(".")
+          text.concat(". #{bldtag}")
         when "jekyll"
           text = ".. Uses Jekyll config files:\n+\n--"
           files = self.props['files']
@@ -433,7 +443,7 @@ class Build
             text.concat(" at `#{self.props['arguments']['destination']}`")
           end
           text.concat("#{reason}") if reason
-          text.concat(".\n--\n")
+          text.concat(". #{bldtag}\n--\n")
         end
         return text
       end
@@ -524,6 +534,7 @@ end # class Build
 
 class DataSrc
   # initialization means establishing a proper hash for the 'data' param
+  # returns a hash of file, ext, type, pattern
   def initialize datasrc
     @datasrc = {}
     @datasrc['file'] = datasrc
@@ -541,15 +552,17 @@ class DataSrc
       end
     else
       if datasrc.is_a? String
+        @datasrc['file'] = datasrc
         @datasrc['ext'] = File.extname(datasrc)
       else
-        if datasrc.is_a? Array
-
-        else
-          raise "InvalidDataSource"
-        end
+        raise "InvalidDataSource" unless datasrc.is_a? Array
+        # We'll allow recursive arrays soon
       end
     end
+  end
+
+  def obj
+    @datasrc
   end
 
   def file
@@ -626,12 +639,10 @@ end
 
 # Get data
 def get_data datasrc
+  raise "InvalidDataSource" unless datasrc.is_a? DataSrc
   @logger.debug "Executing liquify parsing operation."
-  if datasrc.is_a? String
-    datasrc = DataSrc.new(datasrc)
-  end
   validate_file_input(datasrc.file, "data")
-  return ingest_data(datasrc)
+  ingest_data(datasrc)
 end
 
 # Pull in a semi-structured data file, converting contents to a Ruby hash
@@ -678,6 +689,11 @@ def ingest_data datasrc
   end
   if data.is_a? Array
     data = {"data" => data}
+  else
+    unless data['data'] # let's not overwrite an existing var named 'data'
+      nested = { "data" => data }
+      data.merge!nested
+    end
   end
   return data
 end
@@ -726,7 +742,7 @@ def liquify datasrc, template_file, output, variables=nil
   validate_file_input(template_file, "template")
   if variables
     vars = { "vars" => variables }
-    input.merge!vars
+    input = data.merge!vars
   end
   begin
     template = File.read(template_file) # reads the template file
@@ -759,8 +775,7 @@ def liquify datasrc, template_file, output, variables=nil
   end
 end
 
-def regurgidata datasrc, output
-  data = get_data(datasrc)
+def regurgidata data, output
   raise "UnrecognizedFileExtension" unless File.extname(output).match(/\.yml|\.json|\.xml|\.csv/)
   case File.extname(output)
     when ".yml"
@@ -1214,7 +1229,7 @@ command_parser.parse!
 # Upfront debug output
 @logger.debug "Base dir: #{@base_dir} (The path from which LiquiDoc CLI commands are relative.)"
 
-explainer_init
+explainer_init()
 
 # ===
 # Execute
