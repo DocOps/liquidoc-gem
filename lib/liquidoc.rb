@@ -679,8 +679,10 @@ end
 # Parse given data using given template, generating given output
 def liquify datasrc, template_file, output, variables=nil
   input = get_data(datasrc)
-  nested = { "data" => get_data(datasrc)}
-  input.merge!nested
+  unless input['data']
+    nested = { "data" => input}
+    input.merge!nested
+  end
   validate_file_input(template_file, "template")
   if variables
     vars = { "vars" => variables }
