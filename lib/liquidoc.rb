@@ -600,11 +600,7 @@ end
 
 # Pull in a semi-structured data file, converting contents to a Ruby hash
 def ingest_data datasrc
-# Must be passed a proper data object (there must be a better way to validate arg datatypes)
-  unless datasrc.is_a? Object
-    raise "InvalidDataObject"
-  end
-  # This proc should really begin here, once the datasrc object is in order
+  raise "InvalidDataObject" unless datasrc.is_a? Object
   case datasrc.type
   when "yml"
     begin
@@ -680,7 +676,7 @@ end
 def liquify datasrc, template_file, output, variables=nil
   input = get_data(datasrc)
   unless input['data']
-    nested = { "data" => input}
+    nested = { "data" => input }
     input.merge!nested
   end
   validate_file_input(template_file, "template")
