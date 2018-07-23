@@ -676,7 +676,7 @@ end
 def liquify datasrc, template_file, output, variables=nil
   input = get_data(datasrc)
   unless input['data']
-    nested = { "data" => input }
+    nested = { "data" => input.dup }
     input.merge!nested
   end
   validate_file_input(template_file, "template")
