@@ -1,4 +1,6 @@
 = LiquiDoc
+:toc: preamble
+
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
 It is especially suited for documentation projects with various required output formats, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
@@ -877,14 +879,56 @@ See <<per-build-properties-files>>.
 
 === Deploy Operations
 
-It's not clear how deeply we will delve into deploy operations, since other build systems (such as rake) would seem far more suitable.
-For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving.
+Mainstream deployment platforms are probebly better suited to tying all your operations together, but we plan to bake a few common operations in to help you get started.
+For true build-and-deployment control, consider build tools such as Make, Rake, and Gradle, or deployment tools like Travis CI, CircleCI, and Jenkins.
+
+==== Jekyll Serve
+
+For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving, so we'll start there.
 
 For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
 This will attempt to serve files from the *destination* set for the associated Jekyll build.
 
 [WARNING]
 Deployment of Jekyll sites is both limited and untested under nonstandard conditions.
+
+==== Algolia Search Indexing for Jekyll
+
+If you're using Jekyll to build sites, LiquiDoc makes indexing your files with the Algolia cloud search service a matter of configuration.
+The heavy lifting is performed by the jekyll-algolia plugin, but LiquiDoc can handle indexing even a complex site by using the same configuration that built your HTML content (which is what Algolia actually indexes).
+
+[NOTE]
+You will need a free community (or premium) link:https://www.algolia.com/users/sign_up/hacker[Algolia account] to take advantage of Algolia's indexing service and REST API.
+Simply create a named index, then visit the API Keys to collect the rest of the info you'll need to get going.
+
+To configure Algolia indexing, add a block to your main Jekyll configuration file.
+
+.Example Jekyll Algolia configuration
+[source,yaml]
+----
+algolia:
+  application_id: 'your-application-id' # <1>
+  search_only_api_key: 'your-search-only-api-key' # <2>
+  extensions_to_index: [adoc] # <3>
+----
+
+<1> From the top bar of your Algolia interface.
+<2> From the API Keys screen of your Algolia interface.
+<3> List as many extensions as apply, separated by commas.
+
+Call your same LiquiDoc build command with the `--search-index-push` or `--search-index-dry` flags along with the `--search-api-key='your-admin-api-key-here'` argument in order to invoke the indexing operation.
+The `--search-index-dry` merely tests content packaging, whereas `--search-index-push` connects to the Algolia REST API and attempt to push your content for indexing and storage.
+
+.Example Jekyll Algolia deployment
+[source,shell]
+----
+bundle exec liquidoc -c _configs/build-docs.yml --search-index-push --search-index-api-key='90f556qaa456abh6j3w7e8c10t48c2i57'
+----
+
+This operation performs a complete build, including each render operation, before the Algolia plugin processes content and pushes each build to the indexing service, in turn.
+
+[TIP]
+To add modern site search for your users, add link:https://community.algolia.com/instantsearch.js/[Algolia's InstantSearch functionality] to your front end!
 
 === Config Settings Matrix
 
