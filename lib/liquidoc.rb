@@ -1,7 +1,7 @@
 require 'liquidoc'
+require 'optparse'
 require 'yaml'
 require 'json'
-require 'optparse'
 require 'liquid'
 require 'asciidoctor'
 require 'asciidoctor-pdf'
@@ -907,13 +907,16 @@ def generate_site doc, build
     base_args = "--config #{config_list} #{opts_args}"
     command = "bundle exec jekyll build #{base_args} #{quiet}"
     if @search_index
-      algolia_command = algolia_index_cli(build, base_args, jekyll)
-      command = algolia_command if algolia_command
+      # TODO enable config-based admin api key ingest once config is dynamic
+      command = algolia_index_cmd(build, @search_api_key, base_args)
+      @logger.warn "Search indexing failed." unless command
     end
   end
-  @logger.info "Running #{command}"
-  @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
-  system command
+  if command
+    @logger.info "Running #{command}"
+    @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
+    system command
+  end
   jekyll_serve(build) if @jekyll_serve
 end
 
@@ -940,12 +943,17 @@ def jekyll_serve build
   system command
 end
 
-def algolia_index_cli build, args='', jekyll={}
+def algolia_index_cmd build, apikey=nil, args
   unless build.search and build.search['index']
-    @logger.warn "No index configuration found for build; Jekyll command written without Algolia."
+    @logger.warn "No index configuration found for build; jekyll-algolia operation skipped for this build."
     return false
   else
-    return "ALGOLIA_INDEX_NAME='#{build.search['index']}' ALGOLIA_API_KEY='#{jekyll['source']}' bundle exec jekyll algolia #{@search_index_dry} #{args} "
+    unless apikey
+      @logger.warn "No Algolia admin API key passed; skipping jekyll-algolia operation for this build."
+      return false
+    else
+      return "ALGOLIA_INDEX_NAME='#{build.search['index']}' ALGOLIA_API_KEY='#{apikey}' bundle exec jekyll algolia #{@search_index_dry} #{args} "
+    end
   end
 end
 
@@ -1131,13 +1139,17 @@ command_parser = OptionParser.new do|opts|
     @jekyll_serve = true
   end
 
-  opts.on("--search-index-push", "EXPERIMENTAL: Runs any search indexing configured in the build step and pushes to Algolia.") do
+  opts.on("--search-index-push", "Runs any search indexing configured in the build step and pushes to Algolia.") do
     @search_index = true
   end
 
-  opts.on("--search-index-dry", "EXPERIMENTAL: Runs any search indexing configured in the build step but does not push to Algolia.") do
+  opts.on("--search-index-dry", "Runs any search indexing configured in the build step but does NOT push to Algolia.") do
     @search_index = true
     @search_index_dry = "--dry-run"
+  end
+
+  opts.on("--search-api-key=STRING", "Passes Algolia Admin API key (which you should keep out of Git).") do |n|
+    @search_api_key = n
   end
 
   opts.on("-h", "--help", "Returns help.") do
