@@ -1062,6 +1062,12 @@ s| properties
 | N/A
 | Optional
 |
+
+s| search
+| N/A
+| N/A
+| Optional
+|
 |===
 
 pass:[*]The `output` setting is considered optional for render operations because static site generations target a directory set in the SSG's config file.
