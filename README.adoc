@@ -901,8 +901,10 @@ The heavy lifting is performed by the jekyll-algolia plugin, but LiquiDoc can ha
 You will need a free community (or premium) link:https://www.algolia.com/users/sign_up/hacker[Algolia account] to take advantage of Algolia's indexing service and REST API.
 Simply create a named index, then visit the API Keys to collect the rest of the info you'll need to get going.
 
-To configure Algolia indexing, add a block to your main Jekyll configuration file.
+Two hard-coding steps are required to prep your source to handle Algolia index pushes.
 
+. Add a block to your main Jekyll configuration file.
++
 .Example Jekyll Algolia configuration
 [source,yaml]
 ----
@@ -911,13 +913,37 @@ algolia:
   search_only_api_key: 'your-search-only-api-key' # <2>
   extensions_to_index: [adoc] # <3>
 ----
-
++
 <1> From the top bar of your Algolia interface.
 <2> From the API Keys screen of your Algolia interface.
 <3> List as many extensions as apply, separated by commas.
 
-Call your same LiquiDoc build command with the `--search-index-push` or `--search-index-dry` flags along with the `--search-api-key='your-admin-api-key-here'` argument in order to invoke the indexing operation.
-The `--search-index-dry` merely tests content packaging, whereas `--search-index-push` connects to the Algolia REST API and attempt to push your content for indexing and storage.
+. Add a block to your build config.
++
+[source,yaml]
+----
+  - action: render
+    data: globals.yml
+    builds:
+      - backend: jekyll
+        properties:
+          files:
+            - _configs/jekyll-global.yml
+            - _configs/jekyll-portal-1.yml
+          arguments:
+            destination: build/site/user-basic
+        attributes:
+          portal_term: Guide
+        search:
+          index: 'portal-1'
+----
++
+The `index:` parameter is for the name of the index you are pushing to.
+(An Algolia “app” can have multiple “indices”.)
+If you have
+
+Now you can call your same LiquiDoc build command with the `--search-index-push` or `--search-index-dry` flags along with the `--search-api-key='your-admin-api-key-here'` argument in order to invoke the indexing operation.
+The `--search-index-dry` flag merely tests content packaging, whereas `--search-index-push` connects to the Algolia REST API and attempt to push your content for indexing and storage.
 
 .Example Jekyll Algolia deployment
 [source,shell]
