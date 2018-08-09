@@ -45,6 +45,9 @@ require 'jekyll'
 @output_filename = 'index'
 @attributes = {}
 @passed_attrs = {}
+@passed_vars = {}
+@passed_configvars = {}
+@parseconfig = false
 @verbose = false
 @quiet = false
 @explicit = false
@@ -68,8 +71,16 @@ FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
 # ===
 
 # Establish source, template, index, etc details for build jobs from a config file
-def config_build config_file
+def config_build config_file, config_vars=nil, parse=false
   @logger.debug "Using config file #{config_file}."
+  if config_vars
+  # If config variables are passed on the CLI, we want to parse the config file
+  # and use the parsed version for the rest fo this routine
+    config_out = "#{@build_dir}/pre/#{File.basename(config_file)}"
+    liquify(nil,config_file, config_out, config_vars)
+    config_file = config_out
+    @logger.debug "Config parsed! Using #{config_out} for build."
+  end
   validate_file_input(config_file, "config")
   begin
     config = YAML.load_file(config_file)
@@ -94,12 +105,15 @@ def iterate_build cfg
     type = step.type
     case type # a switch to evaluate the 'action' parameter for each step in the iteration...
     when "parse"
-      data = DataSrc.new(step.data)
+      if step.data
+        data = DataSrc.new(step.data)
+      end
       builds = step.builds
-      for bld in builds
+      builds.each do |bld|
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
           @explainer.info build.message
+          build.add_vars!(@passed_vars) unless @passed_vars.empty?
           liquify(data, build.template, build.output, build.variables) # perform the liquify operation
         else
           regurgidata(data, build.output)
@@ -122,7 +136,7 @@ def iterate_build cfg
         render_doc(doc, build) # perform the render operation
       end
     when "deploy"
-      @logger.warn "Deploy actions are limited and experimental experimental."
+      @logger.warn "Deploy actions are limited and experimental."
       jekyll_serve(build)
     else
       @logger.warn "The action `#{type}` is not valid."
@@ -278,7 +292,11 @@ class BuildConfigStep
             text = ". #{stage}Draws data from `#{self.data[0]}`"
           end
         else
-          text = ". #{stage}Draws data from `#{self.data}`"
+          if self.data
+            text = ". #{stage}Draws data from `#{self.data['file']}`"
+          else
+            text = ". #{stage}Uses data passed via CLI --var options."
+          end
         end
         text.concat("#{reason},") if reason
         text.concat(" and parses it as follows:")
@@ -356,6 +374,11 @@ class Build
 
   def variables
     @build['variables']
+  end
+
+  def add_vars! vars
+      vars.to_h unless vars.is_a? Hash
+      self.variables.merge!vars
   end
 
   def message
@@ -674,11 +697,19 @@ end
 
 # Parse given data using given template, generating given output
 def liquify datasrc, template_file, output, variables=nil
-  input = get_data(datasrc)
-  unless input['data']
-    nested = { "data" => input.dup }
+  if datasrc
+    input = get_data(datasrc)
+    nested = { "data" => get_data(datasrc)}
     input.merge!nested
   end
+  if variables
+    if input
+      input.merge!variables
+    else
+      input = variables
+    end
+  end
+  @logger.error "Parse operations need at least a data file or variables." unless input
   validate_file_input(template_file, "template")
   if variables
     vars = { "vars" => variables }
@@ -935,6 +966,7 @@ end
 
 def jekyll_serve build
   # Locally serve Jekyll as per the primary Jekyll config file
+  @logger.debug "Attempting Jekyll serve operation."
   config_file = build.props['files'][0]
   if build.props['arguments']
     opts_args = build.props['arguments'].to_opts_args
@@ -1151,6 +1183,24 @@ command_parser = OptionParser.new do|opts|
   opts.on("--search-api-key=STRING", "Passes Algolia Admin API key (which you should keep out of Git).") do |n|
     @search_api_key = n
   end
+  
+  opts.on("--var KEY=VALUE", "For passing variables directly to the 'vars.' scope template via command line, for non-config builds only.") do |n|
+    pair = {}
+    k,v = n.split('=')
+      pair[k] = v
+    @passed_vars.merge!pair
+  end
+
+  opts.on("-x", "--configvar KEY=VALUE", "For sending variables to the 'vars.' scope of the config file; also instantiates config-file parsing.") do |n|
+    pair = {}
+    k,v = n.split('=')
+      pair[k] = v
+    @passed_configvars.merge!pair
+  end
+
+  opts.on("--parseconfig", "Preprocess the designated configuration file (as a template), parsing Liquid markup without necessarily injecting new data into the config template.") do
+    @parseconfig = true
+  end
 
   opts.on("-h", "--help", "Returns help.") do
     puts opts
@@ -1173,12 +1223,12 @@ explainer_init
 unless @config_file
   @logger.debug "Executing config-free build based on API/CLI arguments alone."
   if @data_file
-    liquify(@data_file, @template_file, @output_file)
+    liquify(@data_file, @template_file, @output_file, @passed_vars)
   end
   if @index_file
     @logger.warn "Rendering via command line arguments is not yet implemented. Use a config file."
   end
 else
   @logger.debug "Executing... config_build"
-  config_build(@config_file)
+  config_build(@config_file, @passed_configvars, @parseconfig)
 end
