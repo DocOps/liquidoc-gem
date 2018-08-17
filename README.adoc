@@ -1,6 +1,4 @@
 = LiquiDoc
-:toc: preamble
-
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
 It is especially suited for documentation projects with various required output formats, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
@@ -125,10 +123,10 @@ Add `--verbose` to see the steps LiquiDoc is taking.
 The best way to use LiquiDoc is with a configuration file.
 This not only makes the command line much easier to manage (requiring just a configuration file path argument), it also adds the ability to perform more complex builds and manage them with source control.
 
-Here is the basic structure of a valid config file:
+Here is very simple build routine as instructed by a LiquiDoc config:
 
 [source,yaml]
-.Example config file for recognized format parsing
+.Example config file for recognized-format parsing
 ----
 - action: parse # <1>
   data: source_data_file.json # <2>
@@ -468,7 +466,10 @@ G_H Some text for &hdf 1t`F false
 
 ==== Passing Additional Variables
 
-Parse operations accept fixed variables, passed as a structure called `variables:` in the config.
+In addition to data files, parse operations accept fixed variables and environment variables.
+
+*Fixed variables* are passed as a _per-build_ structure called `variables:` in the config file.
+Each build operation can accept a distinct set of variables.
 
 [source,yaml]
 .Example config -- Passing additional variables into a parse action
@@ -476,41 +477,37 @@ Parse operations accept fixed variables, passed as a structure called `variables
 - action: parse
   data: schema.yml
   builds:
-    - template: _templates/side-nav.html
-      output: _output/side-nav.html
+    - name: parse-basic-nav
+      template: _templates/side-nav.html
+      output: _output/side-nav-basic.html
       variables:
-        environment: staging
         product:
-          version: 2.1.0
-          locale: en-US
-    - template: _templates/side-nav.html
-      output: _output/side-nav.html
+          edition: basic
+    - name: parse-premium-nav
+      template: _templates/side-nav.html
+      output: _output/side-nav-prem.html
       variables:
-        environment: production
         product:
-          version: 2.1.0
-          locale: en-US
+          edition: premium
 ----
 
-Now templates can use `vars.environment` to call these additional variables.
+This configuration will use the same data and templates to generate two distinct output files.
+Each build uses an identical Liquid template (`side-nav.html`) to parse its distinct `side-nav-<edition>.html` file.
+Inside that template, we might find a block of Liquid code hiding some navigation items from the basic edition, and vice versa.
 
-[source,liquid]
-.Example Liquid template (`side-nav.html`) with variables passed
+.Example Liquid conditionals
+[source,html]
 ----
-{% if vars.environment == "staging" %}
-{% assign base_url = "http://staging.int.example.com" %}
-{% else %}
-{% assign base_url = "http://example.com" %}
+<li><a href="home">Home</a></li>
+<li><a href="dash">Dashboard</a></li>
+{% if vars.product.edition == "basic" %}
+<li><a href="upgrade">Upgrade!</a></li>
+{% elsif vars.product.edition == "premium" %}
+<li><a href="billing">Billing</a></li>
 {% endif %}
-LiquiDoc {{ vars.product.version }}
-<ul class="nav">
-{% for page in data.pages %}
-<li><a href="{{ base_url }}/{{ page.path  }}">{{ page.name }}</a>
-{% endfor %}
-</ul>
 ----
 
-As you can see, the `vars` scope supports nested structures; it's just more YAML like your data files, just called out per-build in the configuration.
+
 
 ==== Output
 
@@ -798,10 +795,10 @@ bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW' -a t
 
 multiple attribute files::
 You may also specify more than one attribute file by separating filenames with commas.
-They will be processed in order.
+They will be ingested in order.
 
 specific subdata::
-You may designate a specific block in your data file by designating it with a colon.
+You may specify a particular block in your data file by designating it with a colon.
 +
 .Example -- Listing multiple data files & designating a nested block
 [source,yaml]
@@ -820,16 +817,16 @@ You may designate a specific block in your data file by designating it with a co
 +
 Here we see `,` used as a delimiter between files and `:` as an indicator that a block designator follows.
 In this case, the render action will load the `settings.attributes` block from the `product.yml` file.
-
++
 .Example -- Designating data blocks within a properties files
 [source,yaml]
 ----
   properties:
     files:
-      - countries.yml:china
+      - countries.yml:cn
       - edition.yml:enterprise.premium
 ----
-
++
 In this last case, we're passing locale settings for a premium edition targeted to a Chinese audience.
 
 ==== Render Build Settings Overview
@@ -879,12 +876,8 @@ See <<per-build-properties-files>>.
 
 === Deploy Operations
 
-Mainstream deployment platforms are probebly better suited to tying all your operations together, but we plan to bake a few common operations in to help you get started.
-For true build-and-deployment control, consider build tools such as Make, Rake, and Gradle, or deployment tools like Travis CI, CircleCI, and Jenkins.
-
-==== Jekyll Serve
-
-For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving, so we'll start there.
+It's not clear how deeply we will delve into deploy operations, since other build systems (such as rake) would seem far more suitable.
+For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving.
 
 For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
 This will attempt to serve files from the *destination* set for the associated Jekyll build.
@@ -892,70 +885,318 @@ This will attempt to serve files from the *destination* set for the associated J
 [WARNING]
 Deployment of Jekyll sites is both limited and untested under nonstandard conditions.
 
-==== Algolia Search Indexing for Jekyll
-
-If you're using Jekyll to build sites, LiquiDoc makes indexing your files with the Algolia cloud search service a matter of configuration.
-The heavy lifting is performed by the jekyll-algolia plugin, but LiquiDoc can handle indexing even a complex site by using the same configuration that built your HTML content (which is what Algolia actually indexes).
-
 [NOTE]
-You will need a free community (or premium) link:https://www.algolia.com/users/sign_up/hacker[Algolia account] to take advantage of Algolia's indexing service and REST API.
-Simply create a named index, then visit the API Keys to collect the rest of the info you'll need to get going.
+The <<config-settings-matrix,*Config Settings Matrix*>> has moved to the <<reference,Reference Section>>.
 
-Two hard-coding steps are required to prep your source to handle Algolia index pushes.
+== Configuring a LiquiDoc Build
 
-. Add a block to your main Jekyll configuration file.
-+
-.Example Jekyll Algolia configuration
+In order to seriously explore and instruct this tool's ability to single-source a product's entire docs-integrated codebase, I have set out on a project for LiquiDoc to eat its own proverbial dog food.
+That is, I'm using LiquiDoc to document LiquiDoc in a separate repository -- one which treats the LiquiDoc gem repository (_this_ repo) as a Git submodule.
+That is, for purposes of coding, _all_ of the *liquidoc-gem* repo's code is accesible by way of an alias path, `products/liquidoc-gem`, from the base of the *liquidoc-docs* project.
+
+=== Gem Repo as Submodule
+
+I am on record as prefering to _keep docs source in the same codebase as that of the product they reference_.
+I've used some version of that statement in almost everything I write on the matter.
+Yet there are plenty of reasons I can think of that strongly favor the product-as-submodule approach.
+I will explore other cases in _Codewriting_, but my reason in the case of LiquiDoc and its own docs is simply to avoid confusion between the utility and the docs.
+Call it ironic, but other than this README, you won't find LiquiDoc's documentation source inside its product repo.
+
+But you will sort of find the product repo inside the docs repo, where the former's source can be used to inform content and build configurations alike.
+My intention is to establish a single source of truth among the two repos.
+
+I'll leave it to the link:https://github.com/DocOps/ldcmf-guides[LDCMF Guides README] to take it from here.
+That's where you'll find a more detailed project overview.
+
+On a final note, this means I will begin moving content from this README (where it sits like a static blob) into the highly dynamic LDCMF project.
+Other content will simply be +++include::[]+++ed into the project via that smuggling tunnel of a submodule.
+
+[[self-documenting-configuration]]
+=== Self-Documenting Configuration
+
+An unscheduled feature started to make a lot of sense as I built the LiquiDoc project.
+For non-geniuses like myself, it can be really helpful to have a plain-English accounting of what is happening during a build procedure.
+I don't know if any other build utilities have a facility like this, but I added it with minimal effort (after getting over some abstract challenges I'll talk about elsewhere).
+
+I added some code to this gem that creates a secondary log as a LiquiDoc build iterates through a configuration file.
+If you add no new fields to your build config's YAML file, this secondary logger will still generate a plain-language description of the steps it is taking.
+By default these are written to a file stored under your build directory (`_build/pre/config-explainer.adoc` unless otherwise established).
+This file can be included into the build.
+
+Alternatively, the log will print to screen (console) during a configured LiquiDoc build procedure.
+Simply add the `--explicit` flag to your command.
+
+.Example
+[source,bash]
+----
+bundle exec liquidoc -c _configs/build-docs.yml --explicit
+----
+
+This feature will explain which sources are used to produce what output, but it won't say why.
+LiquiDoc administrator's can state the purpuse of each action step and each build sub-step.
+There are two ways to intervene with the automated log message.
+
+message::
+Add a custom `message:` key.
+The contents of this parameter will appear _instead of_ the automated message.
+
+reason::
+The reason will be integrated with the automated message (it's moot with a custom message as described above).
+Usually it will be appended as a comma-demarcated phrase at the end of the automated statement or in a sensible place in the middle.
+
+.Example from LDCMF Guides `_configs/build-docs.yml`
 [source,yaml]
 ----
-algolia:
-  application_id: 'your-application-id' # <1>
-  search_only_api_key: 'your-search-only-api-key' # <2>
-  extensions_to_index: [adoc] # <3>
+- action: migrate
+  source: theme/
+  target: _build/
+  reason: so `theme/` dir will be subordinate to the SSG source path
+- action: parse
+  data: data/product.yml
+  message: . Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
+  builds:
+    - template: _templates/liquid/index-by-user-stories.asciidoc
+      output: _build/_built_index-stories.adoc
+      message: |
+        .. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
 ----
-+
-<1> From the top bar of your Algolia interface.
-<2> From the API Keys screen of your Algolia interface.
-<3> List as many extensions as apply, separated by commas.
-
-. Add a block to your build config.
-+
-[source,yaml]
-----
-  - action: render
-    data: globals.yml
-    builds:
-      - backend: jekyll
-        properties:
-          files:
-            - _configs/jekyll-global.yml
-            - _configs/jekyll-portal-1.yml
-          arguments:
-            destination: build/site/user-basic
-        attributes:
-          portal_term: Guide
-        search:
-          index: 'portal-1'
-----
-+
-The `index:` parameter is for the name of the index you are pushing to.
-(An Algolia “app” can have multiple “indices”.)
-If you have
-
-Now you can call your same LiquiDoc build command with the `--search-index-push` or `--search-index-dry` flags along with the `--search-api-key='your-admin-api-key-here'` argument in order to invoke the indexing operation.
-The `--search-index-dry` flag merely tests content packaging, whereas `--search-index-push` connects to the Algolia REST API and attempt to push your content for indexing and storage.
-
-.Example Jekyll Algolia deployment
-[source,shell]
-----
-bundle exec liquidoc -c _configs/build-docs.yml --search-index-push --search-index-api-key='90f556qaa456abh6j3w7e8c10t48c2i57'
-----
-
-This operation performs a complete build, including each render operation, before the Algolia plugin processes content and pushes each build to the indexing service, in turn.
 
 [TIP]
-To add modern site search for your users, add link:https://community.algolia.com/instantsearch.js/[Algolia's InstantSearch functionality] to your front end!
+In custom `message:` fields, adding AsciiDoc ordered-list markup maintains the ordered lists this feature generates by for automated steps (the ones where you don't explicitly declare a `message:`).
+You may also use bullets (`*`), add styling directives or other markers, etc.
 
+.Post-render output
+====
+. Copies `theme/` to `_build/`, so theme/ dir will be subordinate to the SSG source path.
+. Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
+.. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
+====
+
+Let me know if you find this “configuration explainer” feature useful.
+There are definitely some enhancements I could add to it, but I'm calling it a minimum-viable product for now.
+
+[[dynamic-config]]
+=== Dynamic LiquiDoc Build Configurations
+
+As long as we're calling Liquid to manipulate files with templates in our parse operations, we might as well use it to parse our config files themselves.
+This is an _advanced procedure_ for injecting programmatic functionality into your builds.
+If you're comfortable with Liquid templating, you are ready to learn dynamic configuration.
+
+As of LiquiDoc 0.9.0, config files can be parsed (preprocessed) at the top of a build.
+That is, your config files can contain variables, conditionals, and iterative loops -- any <<liquid-tags-supported,Liquid tags supported by LiquiDoc>>.
+
+All you have to do is (1) add Liquid tags to your YAML configuration file and (2) either (a) pass at least one _config variable_ to it when running your `liquidoc` command or (b) pass it the `--parseconfig` flag.
+
+Let's explore that second requirement.
+If the Liquid markup in your config file expects variables, pass those variables on the `liquidoc` CLI using `--configvar key=value`.
+Otherwise, if you are not passing variables to your config, instruct LiquiDoc to parse the config file using the `parseconfig` CLI option.
+For example, this might be the case if your config merely contains some simple looping functionality to process lots of files.
+
+[[config-variables]]
+==== Using Config Variables
+
+Dynamic configurations typically expect variables to be passed in, either to _directly populate values_ in the config file or to _differentially trigger conditional tags_ in the config file.
+
+Let's first take a look at a sample dynamic configuration to see if we can understand what it is trying to do.
+
+.Example `build-config.yml` dynamic LiquiDoc configuration for alternate builds
+[source,yaml]
+----
+- action: parse
+  data: data/products.yml:{{ vars.product_slug }}
+  builds:
+    - template: product-datasheet.asciidoc
+      output: product-datasheet_{{ vars.product_slug }}.adoc
+----
+
+This config file wants to build a product datasheet for a specific product, which it expects to be indicated by a config variable called `product_slug`.
+
+Config variables are passed using the `--configvar varname='var val'` format, where `varname` is any key that exists as a Liquid variable in your config file, and `'var val'` is its value, wrapped in single quotes.
+Let's say in this case, we want to generate the datasheet for the Windows Enterprise edition of our product.
+
+[source,shell]
+----
+bundle exec liquidoc -c _configs/build-config.yml --configvar product_slug=win-ent
+----
+
+This will cause our dynamic configuration to look for a data block formatted like so: `data/products.yml:product_win-ent`.
+So long as our `products.yml` file contains a top-level data structure called `product_win-ent`, we're off to the races.
+
+==== Eliminating Config Variables
+
+Equally as cool as enabling custom builds by accepting what amount to _environment variables_, we can also handle big, repetative builds with Liquid looping.
+Let's try that file again with some powerful tweaks.
+
+.Example `build-config.yml` dynamic LiquiDoc configuration for iterative builds
+[source,yaml]
+----
+{% assign products = "win-exp,win-ent,mac-exp,mac-ent,ubu-exp,ubu-ent" %}
+{% for slug in products %}
+- action: parse
+  data: data/products.yml:{{ slug }}
+  builds:
+    - template: product-datasheet.asciidoc
+      output: product-datasheet_{{ slug }}.adoc
+{% endfor %}
+----
+
+Now we are building six data sheets using eight lines of code.
+And notice what is missing: no more +++vars.+++-scoped variables, just local ones.
+
+Dynamic configurations are limited only by your imagination.
+
+==== Using Environment Variables with Dynamic Configuration
+
+[source,yaml]
+.Example config -- Passing environment variable to a parse action dynamically
+----
+- action: parse
+  data: schema.yml
+  builds:
+    - name: parse-basic-nav
+      template: _templates/side-nav.html
+      output: _output/side-nav-basic.html
+      variables:
+        product:
+          edition: {{ vars.edition }}
+        environment: {{ vars.env }}
+----
+
+With a configuration like this, our `side-nav.html` template can further process variables, such as `base_url` in the example snippet below.
+
+[source,html]
+.Example Liquid template (`side-nav.html`) with variables passed
+----
+{% if vars.env == "staging" %}
+{% assign base_url = "http://staging.int.example.com" %}
+{% elsif vars.env == "production" %}
+{% assign base_url = "http://example.com" %}
+{% endif %}
+LiquiDoc {{ vars.product.edition }}
+<ul class="nav">
+{% for page in data.pages %}
+<li><a href="{{ base_url }}/{{ page.path }}">{{ page.name }}</a>
+{% endfor %}
+</ul>
+----
+
+To set the values of `vars.edition` and `vars.env` in the config file, add for instance `--configvar edition=basic --configvar env=staging`
+
+==== Constraining Build Options with Dynamic Configuration
+
+Another way to use dynamic configuration is to conditionalize steps in the build.
+Recipe-based configuration will eventually be added to LiquiDoc, but for now you can toggle parts of your build on and off using conditionals governed by environment variables.
+For instance,
+
+.Example `build-config.yml` with conditionalized steps
+[source,yaml]
+----
+{% assign build_pdf = true %}
+{% assign build_html = true %}
+{% case recipe %}
+{% when 'pdfonly' %}
+  {% assign build_html = false %}
+{% when 'nopdf' %}
+  {% assign build_pdf = false %}
+{% endcase %}
+- action: render
+  data: _configs/asciidoctor.yml
+  source: content/product-datasheet.adoc
+  builds:
+    {% if build_html %}
+    - backend: html5
+      output: product-datasheet.html
+    {% endif %}
+    {% if build_pdf %}
+    - backend: pdf
+      output: product-datasheet.pdf
+    {% endif %}
+----
+
+With a build config like this, optionally invoking `--configvar recipe=nopdf`, for instance, will suppress the PDF substep during the build routine.
+
+==== Generating Starter Files with Dynamic Configs
+
+The ability to programmatically design config files makes LiquiDoc far more powerful as a UI for _content management_.
+The following example shows how thinking outside the box lets you use the very same tool with which you build your production docs, this time to generate stub files for your LiquiDoc CMF application.
+
+Once you're comfortable with the concept of <<dynamic-config,dynamic LiquiDoc configs>>, check out this example, which you can implement right now in your LDCMF instance.
+
+.Example liquidoc execution with a dynamic config file
+[source,shell]
+----
+bundle exec liquidoc -c _configs/init_topic.yml --configvar slug=some_c_slug-string --configvar title='Some Topic Title for Publication'
+----
+
+The example above commands an extraordinary LiquiDoc build routine.
+The configuration file, `init_topic.yml`, creates topic-file stubs and schema-file entries in fulfillment of LiquiDoc CMF conventions.
+
+.Example configuration file for topic-file stub generation
+[source,yaml]
+----
+- action: parse
+  builds:
+    - template: _templates/liquid/init_topic.asciidoc
+      output: content/topics/{{ vars.slug }}.adoc
+      variables:
+        slug: {{ vars.slug }}
+        title: {{ vars.title }}
+    - template: _templates/liquid/init_topic_schema.yaml
+      output: stdout
+      variables:
+        slug: {{ vars.slug }}
+        title: {{ vars.title }}
+----
+
+As you can see, since this file has Liquid variables embedded in it, we must pass those variables during CLI execution in order for the build to work at all.
+This config file is parsed just like any standard parse action, though it uses the `--configvar` option to ingest environment variables, scoped as `vars.` in the template (remember, in this case _the config file itself is the template_).
+Parsing the configuration will essentially be the first act of the configured build routine, which will then run the parsed file, step by step.
+
+.Example _parsed_ config file for topic-file stub generation
+[source,yaml]
+----
+- action: parse
+  builds:
+    - template: _templates/liquid/init_topic.asciidoc
+      output: content/topics/some_c_slug-string.adoc
+      variables:
+        slug: some_c_slug-string
+        title: Some Topic Title for Publication
+    - template: _templates/liquid/init_topic_schema.yaml
+      output: stdout
+      variables:
+        slug: some_c_slug-string
+        title: Some Topic Title for Publication
+----
+
+Now that we have expanded our `slug` and `title` values into a clean final config, we see that we are generating a file (`some_c_slug-string.adoc`) from one template (`init_topic.asciidoc`).
+We are also generating some screen output (`stdout`) from another template (`init_topic_schema.yaml`).
+The first action generates the LDCMF-style topic file, including its filename and first line, which includes header information generated from the schema.
+
+.Example header include in generated stub
+[source,asciidoc]
+----
+include::{topic_page_meta}[tags="some_c_slug-string"]
+----
+
+Speaking of getting topic metadata from a schema file; first we need to set it.
+In the second build step, we print our new topic's minimal schema entry information for author convenience.
+This can be copied and pasted into your LDCMF schema.
+
+[NOTE]
+*Configuration recipes* are a related feature which is link:https://github.com/DocOps/liquidoc-gem/issues/33[still slated].
+
+// end::usage[]
+
+== Reference
+
+[[liquid-tags-supported]]
+=== Supported Liquid Tags and Filters
+
+LiquiDoc supports all link:https://shopify.github.io/liquid/[standard Liquid tags and filters], as well as all of link:https://jekyllrb.com/docs/templates/#filters[Jekyll's custom Liquid filters].
+Support for link:https://github.com/DocOps/liquidoc-gem/issues/47[Jekyll's include tag] should be coming soon.
+
+[[config-settings-matrix]]
 === Config Settings Matrix
 
 Here is a table of all the established configuration settings, as they pertain to each key LiquiDoc action.
@@ -978,7 +1219,7 @@ s| action
 |
 
 s| data
-| Required
+| Optional
 | N/A
 | Optional
 |
@@ -1062,105 +1303,10 @@ s| properties
 | N/A
 | Optional
 |
-
-s| search
-| N/A
-| N/A
-| Optional
-|
 |===
 
 pass:[*]The `output` setting is considered optional for render operations because static site generations target a directory set in the SSG's config file.
 // end::options-table[]
-
-== Configuring a LiquiDoc Build
-
-In order to seriously explore and instruct this tool's ability to single-source a product's entire docs-integrated codebase, I have set out on a project for LiquiDoc to eat its own proverbial dog food.
-That is, I'm using LiquiDoc to document LiquiDoc in a separate repository -- one which treats the LiquiDoc gem repository (_this_ repo) as a Git submodule.
-That is, for purposes of coding, _all_ of the *liquidoc-gem* repo's code is accesible by way of an alias path, `products/liquidoc-gem`, from the base of the *liquidoc-docs* project.
-
-=== Gem Repo as Submodule
-
-I am on record as prefering to _keep docs source in the same codebase as that of the product they reference_.
-I've used some version of that statement in almost everything I write on the matter.
-Yet there are plenty of reasons I can think of that strongly favor the product-as-submodule approach.
-I will explore other cases in _Codewriting_, but my reason in the case of LiquiDoc and its own docs is simply to avoid confusion between the utility and the docs.
-Call it ironic, but other than this README, you won't find LiquiDoc's documentation source inside its product repo.
-
-But you will sort of find the product repo inside the docs repo, where the former's source can be used to inform content and build configurations alike.
-My intention is to establish a single source of truth among the two repos.
-
-I'll leave it to the link:https://github.com/DocOps/ldcmf-guides[LDCMF Guides README] to take it from here.
-That's where you'll find a more detailed project overview.
-
-On a final note, this means I will begin moving content from this README (where it sits like a static blob) into the highly dynamic LiquiDoc Docs project.
-Other content will simply be `include::[]`ed into the project via that smuggling tunnel of a submodule.
-
-[[self-documenting-configuration]]
-=== Self-Documenting Configuration
-
-An unscheduled feature started to make a lot of sense as I built the LiquiDoc project.
-For non-geniuses like myself, it can be really helpful to have a plain-English accounting of what is happening during a build procedure.
-I don't know if any other build utilities have a facility like this, but I added it with minimal effort (after getting over some abstract challenges I'll talk about elsewhere).
-
-I added some code to this gem that creates a secondary log as a LiquiDoc build iterates through a configuration file.
-If you add no new fields to your build config's YAML file, this secondary logger will still generate a plain-language description of the steps it is taking.
-By default these are written to a file stored under your build directory (`_build/pre/config-explainer.adoc` unless otherwise established).
-This file can be included into the build.
-
-Alternatively, the log will print to screen (console) during a configured LiquiDoc build procedure.
-Simply add the `--explicit` flag to your command.
-
-.Example
-[source,bash]
-----
-bundle exec liquidoc -c _configs/build-docs.yml --explicit
-----
-
-This feature will explain which sources are used to produce what output, but it won't say why.
-LiquiDoc administrator's can state the purpuse of each action step and each build sub-step.
-There are two ways to intervene with the automated log message.
-
-message::
-Add a custom `message:` key.
-The contents of this parameter will appear _instead of_ the automated message.
-
-reason::
-The reason will be integrated with the automated message (it's moot with a custom message as described above).
-Usually it will be appended as a comma-demarcated phrase at the end of the automated statement or in a sensible place in the middle.
-
-.Example from LDCMF Guides `_configs/build-docs.yml`
-[source,yaml]
-----
-- action: migrate
-  source: theme/
-  target: _build/
-  reason: so `theme/` dir will be subordinate to the SSG source path
-- action: parse
-  data: data/product.yml
-  message: . Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
-  builds:
-    - template: _templates/liquid/index-by-user-stories.asciidoc
-      output: _build/_built_index-stories.adoc
-      message: |
-        .. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
-----
-
-[TIP]
-In custom `message:` fields, adding AsciiDoc ordered-list markup maintains the ordered lists this feature generates by for automated steps (the ones where you don't explicitly declare a `message:`).
-You may also use bullets (`*`), add styling directives or other markers, etc.
-
-.Post-render output
-====
-. Copies `theme/` to `_build/`, so theme/ dir will be subordinate to the SSG source path.
-. Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
-.. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
-====
-
-Let me know if you find this “configuration explainer” feature useful.
-There are definitely some enhancements I could add to it, but I'm calling it a minimum-viable product for now.
-
-// end::usage[]
 
 == Meta
 // tag::meta[]
