@@ -1058,8 +1058,8 @@ That is, your config files can contain variables, conditionals, and iterative lo
 All you have to do is (1) add Liquid tags to your YAML configuration file and (2) either (a) pass at least one _config variable_ to it when running your `liquidoc` command or (b) pass it the `--parseconfig` flag.
 
 Let's explore that second requirement.
-If the Liquid markup in your config file expects variables, pass those variables on the `liquidoc` CLI using `--configvar key=value`.
-Otherwise, if you are not passing variables to your config, instruct LiquiDoc to parse the config file using the `parseconfig` CLI option.
+If the Liquid markup in your config file expects variables, pass those variables on the `liquidoc` CLI using `--var key=value`.
+Otherwise, if you are not passing variables to your config, instruct LiquiDoc to parse the config file using the `--parseconfig` CLI flag.
 For example, this might be the case if your config merely contains some simple looping functionality to process lots of files.
 
 [[config-variables]]
@@ -1081,16 +1081,19 @@ Let's first take a look at a sample dynamic configuration to see if we can under
 
 This config file wants to build a product datasheet for a specific product, which it expects to be indicated by a config variable called `product_slug`.
 
-Config variables are passed using the `--configvar varname='var val'` format, where `varname` is any key that exists as a Liquid variable in your config file, and `'var val'` is its value, wrapped in single quotes.
+Config variables are passed using the `--var varname='var val'` format, where `varname` is any key that exists as a Liquid variable in your config file, and `'var val'` is its value, wrapped in single quotes.
 Let's say in this case, we want to generate the datasheet for the Windows Enterprise edition of our product.
 
 [source,shell]
 ----
-bundle exec liquidoc -c _configs/build-config.yml --configvar product_slug=win-ent
+bundle exec liquidoc -c _configs/build-config.yml -v product_slug=win-ent
 ----
 
-This will cause our dynamic configuration to look for a data block formatted like so: `data/products.yml:product_win-ent`.
-So long as our `products.yml` file contains a top-level data structure called `product_win-ent`, we're off to the races.
+[NOTE]
+The `-v` option is an alias for `--var`.
+
+This will cause our dynamic configuration to look for a data block formatted like so: `data/products.yml:win-ent`.
+So long as our `products.yml` file contains a top-level data structure called `win-ent`, we're off to the races.
 
 ==== Eliminating Config Variables
 
@@ -1150,7 +1153,7 @@ LiquiDoc {{ vars.product.edition }}
 </ul>
 ----
 
-To set the values of `vars.edition` and `vars.env` in the config file, add for instance `--configvar edition=basic --configvar env=staging`
+To set the values of `vars.edition` and `vars.env` in the config file, add for instance `--var edition=basic --var env=staging`
 
 ==== Constraining Build Options with Dynamic Configuration
 
@@ -1183,7 +1186,7 @@ For instance,
     {% endif %}
 ----
 
-With a build config like this, optionally invoking `--configvar recipe=nopdf`, for instance, will suppress the PDF substep during the build routine.
+With a build config like this, optionally invoking `--var recipe=nopdf`, for instance, will suppress the PDF substep during the build routine.
 
 ==== Generating Starter Files with Dynamic Configs
 
@@ -1195,7 +1198,7 @@ Once you're comfortable with the concept of <<dynamic-config,dynamic LiquiDoc co
 .Example liquidoc execution with a dynamic config file
 [source,shell]
 ----
-bundle exec liquidoc -c _configs/init_topic.yml --configvar slug=some_c_slug-string --configvar title='Some Topic Title for Publication'
+bundle exec liquidoc -c _configs/init_topic.yml --var slug=some_c_slug-string --var title='Some Topic Title for Publication'
 ----
 
 The example above commands an extraordinary LiquiDoc build routine.
@@ -1219,7 +1222,7 @@ The configuration file, `init_topic.yml`, creates topic-file stubs and schema-fi
 ----
 
 As you can see, since this file has Liquid variables embedded in it, we must pass those variables during CLI execution in order for the build to work at all.
-This config file is parsed just like any standard parse action, though it uses the `--configvar` option to ingest environment variables, scoped as `vars.` in the template (remember, in this case _the config file itself is the template_).
+This config file is parsed just like any standard parse action, though it uses the `--var` option to ingest environment variables, scoped as `vars.` in the template (remember, in this case _the config file itself is the template_).
 Parsing the configuration will essentially be the first act of the configured build routine, which will then run the parsed file, step by step.
 
 .Example _parsed_ config file for topic-file stub generation

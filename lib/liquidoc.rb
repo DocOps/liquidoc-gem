@@ -1183,22 +1183,15 @@ command_parser = OptionParser.new do|opts|
   opts.on("--search-api-key=STRING", "Passes Algolia Admin API key (which you should keep out of Git).") do |n|
     @search_api_key = n
   end
-  
-  opts.on("--var KEY=VALUE", "For passing variables directly to the 'vars.' scope template via command line, for non-config builds only.") do |n|
+
+  opts.on("-v", "--var KEY=VALUE", "For passing variables directly to the 'vars.' scope of a template; for dynamic configs, too.") do |n|
     pair = {}
     k,v = n.split('=')
       pair[k] = v
     @passed_vars.merge!pair
   end
 
-  opts.on("-x", "--configvar KEY=VALUE", "For sending variables to the 'vars.' scope of the config file; also instantiates config-file parsing.") do |n|
-    pair = {}
-    k,v = n.split('=')
-      pair[k] = v
-    @passed_configvars.merge!pair
-  end
-
-  opts.on("--parseconfig", "Preprocess the designated configuration file (as a template), parsing Liquid markup without necessarily injecting new data into the config template.") do
+  opts.on("--parse-config", "Preprocess the designated configuration file as a Liquid template. Superfluous when passing -v/--var arguments.") do
     @parseconfig = true
   end
 
@@ -1230,5 +1223,5 @@ unless @config_file
   end
 else
   @logger.debug "Executing... config_build"
-  config_build(@config_file, @passed_configvars, @parseconfig)
+  config_build(@config_file, @passed_vars, @parseconfig)
 end
