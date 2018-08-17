@@ -71,9 +71,9 @@ FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
 # ===
 
 # Establish source, template, index, etc details for build jobs from a config file
-def config_build config_file, config_vars=nil, parse=false
+def config_build config_file, config_vars={}, parse=false
   @logger.debug "Using config file #{config_file}."
-  if config_vars
+  if config_vars or parse
   # If config variables are passed on the CLI, we want to parse the config file
   # and use the parsed version for the rest fo this routine
     config_out = "#{@build_dir}/pre/#{File.basename(config_file)}"
