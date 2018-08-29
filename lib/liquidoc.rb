@@ -346,7 +346,7 @@ class Build
     build['props'] = build['properties'] if build['properties']
     @build = build
     @type = type
-    @build['variables'] = {}
+    @build['variables'] = {} unless @build['variables']
   end
 
   def template
