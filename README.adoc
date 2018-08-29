@@ -1,4 +1,6 @@
 = LiquiDoc
+:toc: preamble
+
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
 It is especially suited for documentation projects with various required output formats, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
@@ -876,8 +878,12 @@ See <<per-build-properties-files>>.
 
 === Deploy Operations
 
-It's not clear how deeply we will delve into deploy operations, since other build systems (such as rake) would seem far more suitable.
-For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving.
+Mainstream deployment platforms are probebly better suited to tying all your operations together, but we plan to bake a few common operations in to help you get started.
+For true build-and-deployment control, consider build tools such as Make, Rake, and Gradle, or deployment tools like Travis CI, CircleCI, and Jenkins.
+
+==== Jekyll Serve
+
+For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving, so we'll start there.
 
 For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
 This will attempt to serve files from the *destination* set for the associated Jekyll build.
@@ -885,14 +891,78 @@ This will attempt to serve files from the *destination* set for the associated J
 [WARNING]
 Deployment of Jekyll sites is both limited and untested under nonstandard conditions.
 
+==== Algolia Search Indexing for Jekyll
+
+If you're using Jekyll to build sites, LiquiDoc makes indexing your files with the Algolia cloud search service a matter of configuration.
+The heavy lifting is performed by the jekyll-algolia plugin, but LiquiDoc can handle indexing even a complex site by using the same configuration that built your HTML content (which is what Algolia actually indexes).
+
 [NOTE]
-The <<config-settings-matrix,*Config Settings Matrix*>> has moved to the <<reference,Reference Section>>.
+You will need a free community (or premium) link:https://www.algolia.com/users/sign_up/hacker[Algolia account] to take advantage of Algolia's indexing service and REST API.
+Simply create a named index, then visit the API Keys to collect the rest of the info you'll need to get going.
+
+Two hard-coding steps are required to prep your source to handle Algolia index pushes.
+
+. Add a block to your main Jekyll configuration file.
++
+.Example Jekyll Algolia configuration
+[source,yaml]
+----
+algolia:
+  application_id: 'your-application-id' # <1>
+  search_only_api_key: 'your-search-only-api-key' # <2>
+  extensions_to_index: [adoc] # <3>
+----
++
+<1> From the top bar of your Algolia interface.
+<2> From the API Keys screen of your Algolia interface.
+<3> List as many extensions as apply, separated by commas.
+
+. Add a block to your build config.
++
+[source,yaml]
+----
+  - action: render
+    data: globals.yml
+    builds:
+      - backend: jekyll
+        properties:
+          files:
+            - _configs/jekyll-global.yml
+            - _configs/jekyll-portal-1.yml
+          arguments:
+            destination: build/site/user-basic
+        attributes:
+          portal_term: Guide
+        search:
+          index: 'portal-1'
+----
++
+The `index:` parameter is for the name of the index you are pushing to.
+(An Algolia “app” can have multiple “indices”.)
+If you have
+
+Now you can call your same LiquiDoc build command with the `--search-index-push` or `--search-index-dry` flags along with the `--search-api-key='your-admin-api-key-here'` argument in order to invoke the indexing operation.
+The `--search-index-dry` flag merely tests content packaging, whereas `--search-index-push` connects to the Algolia REST API and attempt to push your content for indexing and storage.
+
+.Example Jekyll Algolia deployment
+[source,shell]
+----
+bundle exec liquidoc -c _configs/build-docs.yml --search-index-push --search-index-api-key='90f556qaa456abh6j3w7e8c10t48c2i57'
+----
+
+This operation performs a complete build, including each render operation, before the Algolia plugin processes content and pushes each build to the indexing service, in turn.
+
+[TIP]
+To add modern site search for your users, add link:https://community.algolia.com/instantsearch.js/[Algolia's InstantSearch functionality] to your front end!
 
 == Configuring a LiquiDoc Build
 
 In order to seriously explore and instruct this tool's ability to single-source a product's entire docs-integrated codebase, I have set out on a project for LiquiDoc to eat its own proverbial dog food.
 That is, I'm using LiquiDoc to document LiquiDoc in a separate repository -- one which treats the LiquiDoc gem repository (_this_ repo) as a Git submodule.
 That is, for purposes of coding, _all_ of the *liquidoc-gem* repo's code is accesible by way of an alias path, `products/liquidoc-gem`, from the base of the *liquidoc-docs* project.
+
+[NOTE]
+The <<config-settings-matrix,*Config Settings Matrix*>> has moved to the <<reference,Reference Section>>.
 
 === Gem Repo as Submodule
 
@@ -988,8 +1058,8 @@ That is, your config files can contain variables, conditionals, and iterative lo
 All you have to do is (1) add Liquid tags to your YAML configuration file and (2) either (a) pass at least one _config variable_ to it when running your `liquidoc` command or (b) pass it the `--parseconfig` flag.
 
 Let's explore that second requirement.
-If the Liquid markup in your config file expects variables, pass those variables on the `liquidoc` CLI using `--configvar key=value`.
-Otherwise, if you are not passing variables to your config, instruct LiquiDoc to parse the config file using the `parseconfig` CLI option.
+If the Liquid markup in your config file expects variables, pass those variables on the `liquidoc` CLI using `--var key=value`.
+Otherwise, if you are not passing variables to your config, instruct LiquiDoc to parse the config file using the `--parseconfig` CLI flag.
 For example, this might be the case if your config merely contains some simple looping functionality to process lots of files.
 
 [[config-variables]]
@@ -1011,16 +1081,19 @@ Let's first take a look at a sample dynamic configuration to see if we can under
 
 This config file wants to build a product datasheet for a specific product, which it expects to be indicated by a config variable called `product_slug`.
 
-Config variables are passed using the `--configvar varname='var val'` format, where `varname` is any key that exists as a Liquid variable in your config file, and `'var val'` is its value, wrapped in single quotes.
+Config variables are passed using the `--var varname='var val'` format, where `varname` is any key that exists as a Liquid variable in your config file, and `'var val'` is its value, wrapped in single quotes.
 Let's say in this case, we want to generate the datasheet for the Windows Enterprise edition of our product.
 
 [source,shell]
 ----
-bundle exec liquidoc -c _configs/build-config.yml --configvar product_slug=win-ent
+bundle exec liquidoc -c _configs/build-config.yml -v product_slug=win-ent
 ----
 
-This will cause our dynamic configuration to look for a data block formatted like so: `data/products.yml:product_win-ent`.
-So long as our `products.yml` file contains a top-level data structure called `product_win-ent`, we're off to the races.
+[NOTE]
+The `-v` option is an alias for `--var`.
+
+This will cause our dynamic configuration to look for a data block formatted like so: `data/products.yml:win-ent`.
+So long as our `products.yml` file contains a top-level data structure called `win-ent`, we're off to the races.
 
 ==== Eliminating Config Variables
 
@@ -1080,7 +1153,7 @@ LiquiDoc {{ vars.product.edition }}
 </ul>
 ----
 
-To set the values of `vars.edition` and `vars.env` in the config file, add for instance `--configvar edition=basic --configvar env=staging`
+To set the values of `vars.edition` and `vars.env` in the config file, add for instance `--var edition=basic --var env=staging`
 
 ==== Constraining Build Options with Dynamic Configuration
 
@@ -1113,7 +1186,7 @@ For instance,
     {% endif %}
 ----
 
-With a build config like this, optionally invoking `--configvar recipe=nopdf`, for instance, will suppress the PDF substep during the build routine.
+With a build config like this, optionally invoking `--var recipe=nopdf`, for instance, will suppress the PDF substep during the build routine.
 
 ==== Generating Starter Files with Dynamic Configs
 
@@ -1125,7 +1198,7 @@ Once you're comfortable with the concept of <<dynamic-config,dynamic LiquiDoc co
 .Example liquidoc execution with a dynamic config file
 [source,shell]
 ----
-bundle exec liquidoc -c _configs/init_topic.yml --configvar slug=some_c_slug-string --configvar title='Some Topic Title for Publication'
+bundle exec liquidoc -c _configs/init_topic.yml --var slug=some_c_slug-string --var title='Some Topic Title for Publication'
 ----
 
 The example above commands an extraordinary LiquiDoc build routine.
@@ -1149,7 +1222,7 @@ The configuration file, `init_topic.yml`, creates topic-file stubs and schema-fi
 ----
 
 As you can see, since this file has Liquid variables embedded in it, we must pass those variables during CLI execution in order for the build to work at all.
-This config file is parsed just like any standard parse action, though it uses the `--configvar` option to ingest environment variables, scoped as `vars.` in the template (remember, in this case _the config file itself is the template_).
+This config file is parsed just like any standard parse action, though it uses the `--var` option to ingest environment variables, scoped as `vars.` in the template (remember, in this case _the config file itself is the template_).
 Parsing the configuration will essentially be the first act of the configured build routine, which will then run the parsed file, step by step.
 
 .Example _parsed_ config file for topic-file stub generation
@@ -1299,6 +1372,12 @@ s| variables
 |
 
 s| properties
+| N/A
+| N/A
+| Optional
+|
+
+s| search
 | N/A
 | N/A
 | Optional

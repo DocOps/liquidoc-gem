@@ -1,7 +1,7 @@
 require 'liquidoc'
+require 'optparse'
 require 'yaml'
 require 'json'
-require 'optparse'
 require 'liquid'
 require 'asciidoctor'
 require 'asciidoctor-pdf'
@@ -51,6 +51,8 @@ require 'jekyll'
 @verbose = false
 @quiet = false
 @explicit = false
+@search_index = false
+@search_index_dry = ''
 
 # Instantiate the main Logger object, which is always running
 @logger = Logger.new(STDOUT)
@@ -344,6 +346,7 @@ class Build
     build['props'] = build['properties'] if build['properties']
     @build = build
     @type = type
+    @build['variables'] = {}
   end
 
   def template
@@ -444,6 +447,18 @@ class Build
   # def prop_files_list # force the array back to a list of files (for CLI)
   #   props['files'].force_array if props['files']
   # end
+
+  def search
+    props['search']
+  end
+
+  def add_search_prop! prop
+    begin
+      self.search.merge!prop
+    rescue
+      raise "PropertyInsertionError"
+    end
+  end
 
   # NOTE this section repeats in Class.AsciiDocument
   def attributes
@@ -609,11 +624,7 @@ end
 
 # Pull in a semi-structured data file, converting contents to a Ruby hash
 def ingest_data datasrc
-# Must be passed a proper data object (there must be a better way to validate arg datatypes)
-  unless datasrc.is_a? Object
-    raise "InvalidDataObject"
-  end
-  # This proc should really begin here, once the datasrc object is in order
+  raise "InvalidDataObject" unless datasrc.is_a? Object
   case datasrc.type
   when "yml"
     begin
@@ -677,7 +688,7 @@ def parse_regex data_file, pattern
         end
       end
     end
-    output = {"data" => records}
+    output = records
   rescue Exception => ex
     @logger.error "Something went wrong trying to parse the free-form file. #{ex.class} thrown. #{ex.message}"
     raise "Freeform parse error"
@@ -911,8 +922,8 @@ def generate_site doc, build
   when "jekyll"
     attrs = doc.attributes
     build.add_config_file("_config.yml") unless build.prop_files_array
-    jekyll_config = YAML.load_file(build.prop_files_array[0]) # load the first Jekyll config file locally
-    attrs.merge! ({"base_dir" => jekyll_config['source']}) # Sets default Asciidoctor base_dir to == Jekyll root
+    jekyll = load_jekyll_data(build) # load the first Jekyll config file locally
+    attrs.merge! ({"base_dir" => jekyll['source']}) # Sets default Asciidoctor base_dir to == Jekyll root
     # write all AsciiDoc attributes to a config file for Jekyll to ingest
     attrs.merge!(build.attributes) if build.attributes
     attrs = {"asciidoctor" => {"attributes" => attrs} }
@@ -925,12 +936,29 @@ def generate_site doc, build
     if build.props['arguments']
       opts_args = build.props['arguments'].to_opts_args
     end
-    command = "bundle exec jekyll build --config #{config_list} #{opts_args} #{quiet}"
+    base_args = "--config #{config_list} #{opts_args}"
+    command = "bundle exec jekyll build #{base_args} #{quiet}"
+    if @search_index
+      # TODO enable config-based admin api key ingest once config is dynamic
+      command = algolia_index_cmd(build, @search_api_key, base_args)
+      @logger.warn "Search indexing failed." unless command
+    end
   end
-  @logger.info "Running #{command}"
-  @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
-  system command
+  if command
+    @logger.info "Running #{command}"
+    @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
+    system command
+  end
   jekyll_serve(build) if @jekyll_serve
+end
+
+def load_jekyll_data build
+  data = {}
+  build.prop_files_array.each do |file|
+    settings = YAML.load_file(file)
+    data.merge!settings if settings
+  end
+  return data
 end
 
 # ===
@@ -946,6 +974,20 @@ def jekyll_serve build
   end
   command = "bundle exec jekyll serve --config #{config_file} #{opts_args} --no-watch --skip-initial-build"
   system command
+end
+
+def algolia_index_cmd build, apikey=nil, args
+  unless build.search and build.search['index']
+    @logger.warn "No index configuration found for build; jekyll-algolia operation skipped for this build."
+    return false
+  else
+    unless apikey
+      @logger.warn "No Algolia admin API key passed; skipping jekyll-algolia operation for this build."
+      return false
+    else
+      return "ALGOLIA_INDEX_NAME='#{build.search['index']}' ALGOLIA_API_KEY='#{apikey}' bundle exec jekyll algolia #{@search_index_dry} #{args} "
+    end
+  end
 end
 
 # ===
@@ -1115,7 +1157,7 @@ command_parser = OptionParser.new do|opts|
     @quiet = true
   end
 
-  opts.on("--explicit", "Log explicit step descriptions to console as build progresses. (Otherwise writes to file at #{@build_dir}/pre/config-explainer.adoc .)") do |n|
+  opts.on("--explain", "Log explicit step descriptions to console as build progresses. (Otherwise writes to file at #{@build_dir}/pre/config-explainer.adoc .)") do |n|
     explainer_init("STDOUT")
     @explainer.level = Logger::INFO
     @logger.level = Logger::WARN # Suppress all those INFO-level messages
@@ -1130,21 +1172,27 @@ command_parser = OptionParser.new do|opts|
     @jekyll_serve = true
   end
 
-  opts.on("--var KEY=VALUE", "For passing variables directly to the 'vars.' scope template via command line, for non-config builds only.") do |n|
+  opts.on("--search-index-push", "Runs any search indexing configured in the build step and pushes to Algolia.") do
+    @search_index = true
+  end
+
+  opts.on("--search-index-dry", "Runs any search indexing configured in the build step but does NOT push to Algolia.") do
+    @search_index = true
+    @search_index_dry = "--dry-run"
+  end
+
+  opts.on("--search-api-key=STRING", "Passes Algolia Admin API key (which you should keep out of Git).") do |n|
+    @search_api_key = n
+  end
+
+  opts.on("-v", "--var KEY=VALUE", "For passing variables directly to the 'vars.' scope of a template; for dynamic configs, too.") do |n|
     pair = {}
     k,v = n.split('=')
       pair[k] = v
     @passed_vars.merge!pair
   end
 
-  opts.on("-x", "--cvar KEY=VALUE", "For sending variables to the 'vars.' scope of the config file and triggering Liquid parsing of config.") do |n|
-    pair = {}
-    k,v = n.split('=')
-      pair[k] = v
-    @passed_configvars.merge!pair
-  end
-
-  opts.on("--parse-config", "Preprocess the designated configuration file as a Liquid template. Superfluous when passing -x/--cvar arguments.") do
+  opts.on("--parse-config", "Preprocess the designated configuration file as a Liquid template. Superfluous when passing -v/--var arguments.") do
     @parseconfig = true
   end
 
@@ -1176,5 +1224,5 @@ unless @config_file
   end
 else
   @logger.debug "Executing... config_build"
-  config_build(@config_file, @passed_configvars, @parseconfig)
+  config_build(@config_file, @passed_vars, @parseconfig)
 end
