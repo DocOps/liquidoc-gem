@@ -178,6 +178,16 @@ def validate_config_structure config
 # TODO More validation needed
 end
 
+def contains_liquid filename
+  File.open(filename, "r") do |file_proc|
+    file_proc.each_line do |row|
+      if row.match(/.*\{\%.*\%\}.*|.*\{\{.*\}\}.*/)
+        return true
+      end
+    end
+  end
+end
+
 def explainer_init out=nil
   unless @explainer
     if out == "STDOUT"
