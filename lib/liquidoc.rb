@@ -73,22 +73,24 @@ FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
 # Establish source, template, index, etc details for build jobs from a config file
 def config_build config_file, config_vars={}, parse=false
   @logger.debug "Using config file #{config_file}."
-  if config_vars or parse
+  validate_file_input(config_file, "config")
+  if config_vars.length > 0 or parse or contains_liquid(config_file)
+    @logger.debug "Config_vars: #{config_vars.length}"
   # If config variables are passed on the CLI, we want to parse the config file
   # and use the parsed version for the rest fo this routine
     config_out = "#{@build_dir}/pre/#{File.basename(config_file)}"
     liquify(nil,config_file, config_out, config_vars)
     config_file = config_out
     @logger.debug "Config parsed! Using #{config_out} for build."
+    validate_file_input(config_file, "config")
   end
-  validate_file_input(config_file, "config")
   begin
     config = YAML.load_file(config_file)
-  rescue
+  rescue Exception => ex
     unless File.exists?(config_file)
       @logger.error "Config file #{config_file} not found."
     else
-      @logger.error "Problem loading config file #{config_file}. Exiting."
+      @logger.error "Problem loading config file #{config_file}. #{ex} Exiting."
     end
     raise "ConfigFileError"
   end
