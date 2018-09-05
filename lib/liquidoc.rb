@@ -943,12 +943,15 @@ def generate_site doc, build
     File.open("#{@build_dir}/pre/_attributes.yml", 'w') { |file| file.write(attrs_yaml) }
     build.add_config_file("#{@build_dir}/pre/_attributes.yml")
     config_list = build.prop_files_array.join(',') # flatten the Array back down for the CLI
-    opts_args = ""
     quiet = "--quiet" if @quiet || @explicit
     if build.props['arguments']
-      opts_args = build.props['arguments'].to_opts_args
+      opts_args_file = "#{@build_dir}/pre/jekyll_opts_args.yml"
+      opts_args = build.props['arguments']
+      File.open(opts_args_file, 'w') { |file|
+      file.write(opts_args.to_yaml)}
+      config_list << ",#{opts_args_file}"
     end
-    base_args = "--config #{config_list} #{opts_args}"
+    base_args = "--config #{config_list}"
     command = "bundle exec jekyll build #{base_args} #{quiet}"
     if @search_index
       # TODO enable config-based admin api key ingest once config is dynamic
