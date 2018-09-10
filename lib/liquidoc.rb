@@ -905,26 +905,18 @@ def asciidocify doc, build
   # Add attributes from command-line -a args
   @logger.debug "Final pre-parse attributes: #{attrs.to_yaml}"
   # Perform the aciidoctor convert
-  unless build.backend == "pdf"
-    Asciidoctor.convert_file(
-      doc.index,
-      to_file: to_file,
-      attributes: attrs,
-      require: "pdf",
-      backend: build.backend,
-      doctype: build.doctype,
-      safe: "unsafe",
-      sourcemap: true,
-      verbose: @verbose,
-      mkdirs: true
-    )
-  else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency doesn't seem to perform the same way
-    attrs = '-a ' + attrs.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
-    command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attrs} -a no-header-footer --trace #{doc.index}"
-    @logger.info "Generating PDF. This can take some time..."
-    @logger.debug "Running #{command}"
-    system command
-  end
+  Asciidoctor.convert_file(
+    doc.index,
+    to_file: to_file,
+    attributes: attrs,
+    require: "pdf",
+    backend: build.backend,
+    doctype: build.doctype,
+    safe: "unsafe",
+    sourcemap: true,
+    verbose: @verbose,
+    mkdirs: true
+  )
   @logger.debug "AsciiDoc attributes: #{doc.attributes}"
   @logger.info "Rendered file #{to_file}."
 end
