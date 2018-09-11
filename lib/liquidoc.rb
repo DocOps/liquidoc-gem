@@ -905,6 +905,9 @@ def asciidocify doc, build
   # Add attributes from command-line -a args
   @logger.debug "Final pre-parse attributes: #{attrs.to_yaml}"
   # Perform the aciidoctor convert
+  if build.backend == "pdf"
+    @logger.info "Generating PDF. This can take some time..."
+  end
   Asciidoctor.convert_file(
     doc.index,
     to_file: to_file,
