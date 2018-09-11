@@ -903,7 +903,7 @@ def asciidocify doc, build
   # Add attributes from config file build section
   attrs.merge!(build.attributes) # Finally merge attributes from the build step
   # Add attributes from command-line -a args
-  @logger.debug "Final pre-parse attributes: #{attrs.to_yaml}"
+  @logger.debug "Final pre-Asciidoctor attributes: #{attrs.to_yaml}"
   # Perform the aciidoctor convert
   if build.backend == "pdf"
     @logger.info "Generating PDF. This can take some time..."
@@ -920,7 +920,6 @@ def asciidocify doc, build
     verbose: @verbose,
     mkdirs: true
   )
-  @logger.debug "AsciiDoc attributes: #{doc.attributes}"
   @logger.info "Rendered file #{to_file}."
 end
 
@@ -956,7 +955,7 @@ def generate_site doc, build
   end
   if command
     @logger.info "Running #{command}"
-    @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
+    @logger.debug "Final pre-jekyll-asciidoc attributes: #{doc.attributes.to_yaml} "
     system command
   end
   jekyll_serve(build) if @jekyll_serve
