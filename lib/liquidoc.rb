@@ -788,15 +788,12 @@ end
 
 # Copy images and other files into target dir
 def copy_assets src, dest, inclusive=true
-  if File.file?(src) # for sources that are files
-    target_dir = File.dirname(dest)
-  else # if src is a directory
+  unless File.file?(src)
     unless inclusive then src = src + "/." end
-    target_dir = dest
   end
   @logger.debug "Copying #{src} to #{dest}"
   begin
-    FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
+    FileUtils.mkdir_p(dest) unless File.directory?(dest)
     if File.directory?(src)
       FileUtils.cp_r(src, dest)
     else
