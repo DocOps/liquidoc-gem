@@ -900,29 +900,23 @@ def asciidocify doc, build
   # Add attributes from config file build section
   attrs.merge!(build.attributes) # Finally merge attributes from the build step
   # Add attributes from command-line -a args
-  @logger.debug "Final pre-parse attributes: #{attrs.to_yaml}"
+  @logger.debug "Final pre-Asciidoctor attributes: #{attrs.to_yaml}"
   # Perform the aciidoctor convert
-  unless build.backend == "pdf"
-    Asciidoctor.convert_file(
-      doc.index,
-      to_file: to_file,
-      attributes: attrs,
-      require: "pdf",
-      backend: build.backend,
-      doctype: build.doctype,
-      safe: "unsafe",
-      sourcemap: true,
-      verbose: @verbose,
-      mkdirs: true
-    )
-  else # For PDFs, we're calling the asciidoctor-pdf CLI, as the main dependency doesn't seem to perform the same way
-    attrs = '-a ' + attrs.map{|k,v| "#{k}='#{v}'"}.join(' -a ')
-    command = "asciidoctor-pdf -o #{to_file} -b pdf -d #{build.doctype} -S unsafe #{attrs} -a no-header-footer --trace #{doc.index}"
+  if build.backend == "pdf"
     @logger.info "Generating PDF. This can take some time..."
-    @logger.debug "Running #{command}"
-    system command
   end
-  @logger.debug "AsciiDoc attributes: #{doc.attributes}"
+  Asciidoctor.convert_file(
+    doc.index,
+    to_file: to_file,
+    attributes: attrs,
+    require: "pdf",
+    backend: build.backend,
+    doctype: build.doctype,
+    safe: "unsafe",
+    sourcemap: true,
+    verbose: @verbose,
+    mkdirs: true
+  )
   @logger.info "Rendered file #{to_file}."
 end
 
@@ -958,7 +952,7 @@ def generate_site doc, build
   end
   if command
     @logger.info "Running #{command}"
-    @logger.debug "AsciiDoc attributes: #{doc.attributes.to_yaml} "
+    @logger.debug "Final pre-jekyll-asciidoc attributes: #{doc.attributes.to_yaml} "
     system command
   end
   jekyll_serve(build) if @jekyll_serve
