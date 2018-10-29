@@ -14,18 +14,21 @@
 :xref_source-markup-liquid-basics: liquid-templating
 :xref_build-config-dynamic: dynamic-config
 :xref_build-config-file-local: self-doc-config
-:toc: preamble
+:toc: macro
+:toclevels: 3
 
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
 It is especially suited for documentation projects with various required output formats from complex, single-sourced codebases, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
 The highly configurable command-line utility (and Ruby gem) engages template engines to parse complex data into rich text output, from *blogs* to *books* to *knowledge bases* to *slide presentations*.
 
-Sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
+Content source is formatted in the incredible *AsciiDoc lightweight markup* language.
+Data sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
 LiquiDoc also accepts *regular expressions* to parse unconventionally formatted files.
 
-LiquiDoc relies heavily on the Asciidoctor rendering engine, which produces HTML and PDF documents as well as complete static websites, the latter via Jekyll.
+toc::[]
 
+LiquiDoc relies heavily on the Asciidoctor rendering engine, which produces HTML and PDF documents as well as complete static websites, the latter via Jekyll.
 Output can be pretty much any flat file, with automatic data conversions to JSON and YAML, as well as rich-text/multimedia formats like HTML, PDF, slide decks, and more.
 // end::overview[]
 
