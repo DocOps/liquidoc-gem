@@ -43,12 +43,9 @@ LiquiDoc is a build tool for software-documentation projects or for the document
 Unlike tools that are mere converters, LiquiDoc can be configured to perform multiple consecutive routines for generating content from multiple data/content sources, each output in various formats based on distinct templates and themes.
 It can be integrated into build- and package-management systems and deployed for continuous integration (CI).
 
-.LiquiDoc is “AJYL”
-====
 LiquiDoc pulls together the underlying “*AJYL*” technologies: link:https://asciidoctor.org/docs/what-is-asciidoc/[AsciiDoc technical markup] (via link:https://github.com/asciidoctor/asciidoctor[Asciidoctor]), link:https://en.wikipedia.org/wiki/YAML[YAML data structures], and the link:https://shopify.github.io/liquid/[Liquid templating format/engine], built using the link:https://jekyllrb.com/[Jekyll static-site generator] and link:https://jamstack.org/[JAMstack components and services] for publishing and delivery.
 It is developed in coordination with the link:https://ajyl.org/liquidoc-cmf[LiquiDoc Content Management Framework], a recommended architecture, strategies, and conventions for building robust documents with LiquiDoc.
 LiquiDoc itself is fairly open-ended, supporting various configurations of dependent platforms Jekyll and Asciidoctor.
-====
 
 The utility currently provides for basic configuration of build jobs, and it can be incorporated into build toolchains.
 The gem does not have a formalized Ruby API yet, but the command-line interface is very powerful, especially combined with build configs formatted in YAML enhanced by Liquid markup for dynamic parsing of routines at buildtime. (See <<{xref_build-config-dynamic}>>.)
