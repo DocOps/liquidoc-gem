@@ -15,6 +15,7 @@
 :xref_build-config-dynamic: dynamic-config
 :xref_build-config-file-local: self-doc-config
 :toc: macro
+:toclevels: 3
 
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
