@@ -14,14 +14,12 @@
 :xref_source-markup-liquid-basics: liquid-templating
 :xref_build-config-dynamic: dynamic-config
 :xref_build-config-file-local: self-doc-config
-:toc: macro
+:toc: preamble
 
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
 It is especially suited for documentation projects with various required output formats from complex, single-sourced codebases, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
 The highly configurable command-line utility (and Ruby gem) engages template engines to parse complex data into rich text output, from *blogs* to *books* to *knowledge bases* to *slide presentations*.
-
-toc::[]
 
 Sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
 LiquiDoc also accepts *regular expressions* to parse unconventionally formatted files.
