@@ -36,7 +36,7 @@ toc::
 [NOTE]
 While the first two releases of LiquiDoc were published under the MIT license by my former employer, I do not believe the https://github.com/scalingdata/liquidoc-gem[originating repo] will be maintained.
 Therefore, as of version 0.3.0, I maintain this fork under the MIT license.
-More in <<Contributing>> and <<License>>.
+More in <<Contributing>> and <<Licensing>>.
 
 // end::rocana-note[]
 
@@ -59,7 +59,7 @@ From any given data file, multiple template-driven parsing operations can be per
 
 Upcoming capabilities include a secondary publish function for generating link:http://asciidoctor.org/[Asciidoctor] output from data-driven AsciiDoc-formatted files to ePub and even HTML/JavaScript slide presentations.
 
-See this link:https://github.com/briandominick/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
+See this link:https://github.com/DocOps/liquidoc-gem/issues?q=label%3Aenhancement[project's GitHub issues] for upcoming features, and feel free to add your own requests.
 // end::purpose[]
 
 // tag::installation[]
@@ -183,7 +183,7 @@ Can also be `stdout` to write to console.
 ----
 - action: parse
   data: # <1>
-    file: source_data_file.json # <2>
+    file: source_data_file.txt # <2>
     type: regex # <3>
     pattern: (?<kee>[A-Z0-9_]+)\s(?<valu>.*)\n # <4>
   builds:
@@ -267,8 +267,7 @@ timeout,The duration of a session (in seconds),300,false
 ----
 
 The above source data, parsed as a CSV file, will yield an _array_ of hashes.
-Each array item represents a row from the CSV file (except the first row, which establishes parameter keys).
-Each array item contains a _structure_, or what Ruby calls a _hash_.
+Each array item is a _structure_ -- what Ruby calls a _hash_ -- representing a row from the source file (except the first row, which establishes parameter keys).
 As represented in the CSV example above, if the structure contains more than one key-value pair (more than one “column” in the source), all such pairs will be siblings, not nested or hierarchical.
 
 .Example -- array derived from sample.csv, with values depicted
@@ -284,18 +283,19 @@ data[1].default #=> 300
 data[1].required #=> false
 ----
 
-===== Free-form Data
+===== Unstructured Data
 
-Free-form data can only be parsed using regular expression (“regex”) patterns -- otherwise LiquiDoc has no idea what to consider data and what to consider noise, let alone how to label and structure the data.
+Unstructured data files can be ingested as well, as long as records are delineated by lines (as with CSV) _and_ each line meets a consistent pattern we can “scrape” for data to organize.
+This method generates arrays of structures similarly to the CSV approach.
 
+Unstructured records are parsed into using regular expression (“regex”) patterns.
 Any file organized with one record per line may be consumed and parsed by LiquiDoc, provided you tell the parser which variables to extract from where.
-The parser will read each line individually, applying your regex pattern to extract data using named groups.
+The parser will read each line individually, applying your regex pattern to extract data using named groups then storing them as variables for the associated parsing action.
 
 [TIP]
 .Learn regular expressions
-If you're already familiar enough with regex, this note is not for you.
 If you deal with docs but are not a regex user, become one.
-I promise you will deem the initial hurdles worth surmounting.
+They are increedibly powerful and can save hours of error-prone manual work such as complex find and replace.
 
 .Example -- sample.free free-form data source file
 ----
@@ -797,7 +797,7 @@ Imagine this affecting content in the book file.
 \include::chapter-1.adoc[]
 
 \include::chapter-2.adoc[]
-\ifeval::[{edition} == "Special"]
+\ifeval::["{edition}" == "Special"]
 \include::chapter-3.adoc[]
 \endif::[]
 ----
@@ -808,15 +808,14 @@ Not only are we setting the subtitle with a variable; if we're building the spec
 
 [[command-line-arguments]]
 Command-line arguments::
-There is yet a way to override all of this, which is also handy for testing variables out without editing any files:
-pass arguments via the `-a` command-line argument.
+There is yet a way to override all of this, which is also handy for testing variables out without editing any files: pass arguments via the `-a` option on the command line.
 The `-a` option flag accepts an argument in the format of `key=value`, where `key` is the name of your attribute, and `value` is your optional assignment for that attribute.
 You may pass as many attributes as you like this way, up to the capacity of your shell's command line, which is probably something.
 +
 [source,bash]
 .Example -- Setting global build attributes on the CLI
 ----
-bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW' -a testvar=working
+bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW'
 ----
 
 [[more-data]]
@@ -918,7 +917,8 @@ For now, this functionality is limited to adding a `--deploy` flag to your `liqu
 This will attempt to serve files from the `destination:` set for the associated Jekyll build.
 
 [WARNING]
-Deployment of Jekyll sites is both limited and untested under nonstandard conditions.
+LiquiDoc-automated deployment of Jekyll sites is both limited and untested under nonstandard conditions.
+Non-local deployment should be handled by external continuous-integration/devlopment (CICD) tools.
 
 ==== Algolia Search Indexing for Jekyll
 
