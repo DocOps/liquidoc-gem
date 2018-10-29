@@ -1,4 +1,3 @@
-= LiquiDoc
 // This AsciiDoc file must be rendered to be properly viewed.
 // The easiest way to view it rendered is on BitBucket
 // OR copy and paste these contents into
@@ -9,12 +8,13 @@
 // THESE ATTRIBUTES ARE FOR THE README file specifically
 // They will be replaced in the main build by data from
 // data/meta.yml and other files
+= LiquiDoc
 :sfx:
 :show_admin: true
 :xref_source-markup-liquid-basics: liquid-templating
 :xref_build-config-dynamic: dynamic-config
 :xref_build-config-file-local: self-doc-config
-:toc:
+:toc: preamble
 
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
