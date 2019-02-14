@@ -10,6 +10,7 @@ require 'csv'
 require 'crack/xml'
 require 'fileutils'
 require 'jekyll'
+require 'asciidoctor/extensions' unless RUBY_ENGINE == 'opal'
 
 # ===
 # Table of Contents
@@ -123,8 +124,12 @@ def iterate_build cfg
       end
     when "migrate"
       inclusive = true
-      inclusive = step.options['inclusive'] if defined?(step.options['inclusive'])
-      copy_assets(step.source, step.target, inclusive)
+      missing = "exit"
+      if step.options
+        inclusive = step.options['inclusive'] if step.options.has_key?("inclusive")
+        missing = step.options['missing'] if step.options.has_key?("missing")
+      end
+      copy_assets(step.source, step.target, inclusive, missing)
     when "render"
       validate_file_input(step.source, "source") if step.source
       builds = step.builds
@@ -252,6 +257,7 @@ class BuildConfigStep
     if (defined?(@step['action'])).nil?
       raise "ConfigStructError"
     end
+    @step['options'] = nil unless defined?(step['options'])
     validate()
   end
 
@@ -787,7 +793,7 @@ end
 # ===
 
 # Copy images and other files into target dir
-def copy_assets src, dest, inclusive=true
+def copy_assets src, dest, inclusive=true, missing='exit'
   unless File.file?(src)
     unless inclusive then src = src + "/." end
   end
@@ -802,7 +808,7 @@ def copy_assets src, dest, inclusive=true
     @logger.info "Copied #{src} to #{dest}."
   rescue Exception => ex
     @logger.warn "Problem while copying assets. #{ex.message}"
-    raise
+    raise "MissingSourceExit" unless missing == "warn"
   end
 end
 
@@ -905,6 +911,9 @@ def asciidocify doc, build
   if build.backend == "pdf"
     @logger.info "Generating PDF. This can take some time..."
   end
+
+
+
   Asciidoctor.convert_file(
     doc.index,
     to_file: to_file,
