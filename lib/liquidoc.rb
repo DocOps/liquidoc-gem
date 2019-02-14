@@ -10,7 +10,6 @@ require 'csv'
 require 'crack/xml'
 require 'fileutils'
 require 'jekyll'
-require 'asciidoctor/extensions' unless RUBY_ENGINE == 'opal'
 
 # ===
 # Table of Contents
