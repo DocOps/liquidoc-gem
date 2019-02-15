@@ -796,7 +796,21 @@ def copy_assets src, dest, inclusive=true, missing='exit'
   unless File.file?(src)
     unless inclusive then src = src + "/." end
   end
-  @logger.debug "Copying #{src} to #{dest}"
+  src_to_dest = "#{src} to #{dest}"
+  unless (File.file?(src) || File.directory?(src))
+    case missing
+    when "warn"
+      @logger.warn "Skipping migrate action (#{src_to_dest}); source not found."
+      return
+    when "skip"
+      @logger.debug "Skipping migrate action (#{src_to_dest}); source not found."
+      return
+    when "exit"
+      @logger.error "Unexpected missing source in migrate action (#{src_to_dest})."
+      raise "MissingSourceExit"
+    end
+  end
+  @logger.debug "Copying #{src_to_dest}"
   begin
     FileUtils.mkdir_p(dest) unless File.directory?(dest)
     if File.directory?(src)
@@ -806,8 +820,8 @@ def copy_assets src, dest, inclusive=true, missing='exit'
     end
     @logger.info "Copied #{src} to #{dest}."
   rescue Exception => ex
-    @logger.warn "Problem while copying assets. #{ex.message}"
-    raise "MissingSourceExit" unless missing == "warn"
+    @logger.error "Problem while copying assets. #{ex.message}"
+    raise
   end
 end
 
