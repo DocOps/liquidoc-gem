@@ -574,7 +574,7 @@ When inclusive is `false`, they copy to `target/`.
 Individual files must be listed in individual steps, one per step, as in the second step above.
 
 In case of a missing source directory or file to be migrated, the default behavior is the exit the operation (`missing: raise`).
-This can be overridden by setting the option `missing: warn`.
+This can be overridden by setting the option `missing: warn`, to get a warning, or `missing: skip` to not even try the copy operation if the source does not exist.
 
 // end::migrate-operations[]
 

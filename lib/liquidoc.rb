@@ -796,6 +796,9 @@ def copy_assets src, dest, inclusive=true, missing='exit'
   unless File.file?(src)
     unless inclusive then src = src + "/." end
   end
+  if !File.file?(src) && !File.directory?(src)
+    if missing == "skip" then return end
+  end
   @logger.debug "Copying #{src} to #{dest}"
   begin
     FileUtils.mkdir_p(dest) unless File.directory?(dest)
