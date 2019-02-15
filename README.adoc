@@ -555,13 +555,18 @@ In addition to designating `action: migrate`, migrate operations require just a 
 .Example config -- Instructing file copies with 'migrate' action
 ----
 - action: migrate
+  source: index.adoc
+  target: _build/
+- action: migrate
   source: assets/images
   target: _build/img
   options:
     inclusive: false
 - action: migrate
-  source: index-map.adoc
-  target: _build/index-map.adoc
+  source: tmp/{{imported_file}}.adoc
+  target: _build/{{portal_path}}/{{imported_file}}.adoc
+  options:
+    missing: warn
 ----
 
 The first action step above copies all the files and folders in `assets/images` and adds them to `_build/img`.
@@ -570,6 +575,11 @@ When both the source and target paths are directories and inclusive is `true`, t
 When inclusive is `false`, they copy to `target/`.
 
 Individual files must be listed in individual steps, one per step, as in the second step above.
+
+In case of a missing source directory or file to be migrated, the default behavior is to exit the build operation (`missing: exit`).
+This can be overridden and the migrate action skipped when the source is missing.
+Setting the option `missing: warn` logs a warning to console, and `missing: skip` will only print a warning under `--verbose` operations.
+
 // end::migrate-operations[]
 
 === Render Operations
