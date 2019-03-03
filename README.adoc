@@ -1065,6 +1065,7 @@ Set it to true to capture output in a file _and_ print it to screen.
 
 The status of each command is tracked, and errors that result in an exit status of `1` can optionally halt the entire LiquiDoc routine.
 To cause this, you must add an `error:` block to the options, with a child parameter: `response: exit`, as shown above.
+The default behavior is to continue processing (`response: ignore`).
 
 [source,yaml]
 ----
@@ -1077,7 +1078,6 @@ To cause this, you must add an `error:` block to the options, with a child param
 ----
 
 You may optionally provide a second child, `message:` followed by the string users will see when they encounter an error here.
-The default behavior is to continue processing (`response: ignore`).
 
 == Configuring a LiquiDoc Build
 
