@@ -217,6 +217,23 @@ def explainer_init out=nil
   end
 end
 
+def generate_file content, target
+  base_path = File.dirname(target)
+  begin
+    FileUtils::mkdir_p(base_path) unless File.exists?(base_path)
+    File.open(target, 'w') { |file| file.write(content) } # saves file
+  rescue Exception => ex
+    @logger.error "Failed to save output.\n#{ex.class} #{ex.message}"
+    raise "FileNotBuilt"
+  end
+  if File.exists?(target)
+    @logger.info "File built: #{target}"
+  else
+    @logger.error "Hrmp! File not built."
+    raise "FileNotBuilt"
+  end
+end
+
 # ===
 # Core classes
 # ===
@@ -755,20 +772,7 @@ def liquify datasrc, template_file, output, variables=nil
   end
   unless output.downcase == "stdout"
     output_file = output
-    base_path = File.dirname(output)
-    begin
-      FileUtils::mkdir_p(base_path) unless File.exists?(base_path)
-      File.open(output_file, 'w') { |file| file.write(rendered) } # saves file
-    rescue Exception => ex
-      @logger.error "Failed to save output.\n#{ex.class} #{ex.message}"
-      raise "FileNotBuilt"
-    end
-    if File.exists?(output_file)
-      @logger.info "File built: #{output_file}"
-    else
-      @logger.error "Hrmp! File not built."
-      raise "FileNotBuilt"
-    end
+    generate_file(rendered, output_file)
   else # if stdout
     puts "========\nOUTPUT: Rendered with template #{template_file}:\n\n#{rendered}\n"
   end
