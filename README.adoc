@@ -162,7 +162,7 @@ Here is very simple build routine instructed by a LiquiDoc config:
 
 <1> The top-level `-` denotes a new, consecutively executed “step” in the build.
 The `action:` parameter determines what type of action this step will perform.
-The options are `parse`, `migrate`, `render`, and `deploy`.
+The options are `parse`, `migrate`, `render`, and `execute`.
 
 <2> If the `data:` setting's value is a string, it must be the filename of a format automatically recognized by LiquiDoc: `.yml`, `.json`, `.xml`, or `.csv`.
 Otherwise, `data:` must contain subordinate settings for `file:` and `type:`.
@@ -222,7 +222,7 @@ Repeat without the `--stdout` flag, and you'll find the generated files in `_out
 
 // tag::configuration[]
 
-=== Parse Operations
+=== Parse Actions
 
 The primary type of action performed by LiquiDoc during a build step is parsing semi-structured data into any flat format desired.
 
@@ -544,7 +544,7 @@ After this parsing, files are written in any of the given output formats, or els
 Liquid templates can be used to produce any plaintext format imaginable.
 Just format valid syntax with your source data and Liquid template, then save with the proper extension, and you're all set.
 
-=== Migrate Operations
+=== Migrate Actions
 // tag::migrate-operations[]
 During the build process, different tools handle file assets variously, so your images and other embedded files are not always where they need to be relative to the current procedure.
 Migrate actions copy resource files to a temporary/uncommitted directory during the build procedure so they can be readily accessed by subsequent steps.
@@ -582,7 +582,7 @@ Setting the option `missing: warn` logs a warning to console, and `missing: skip
 
 // end::migrate-operations[]
 
-=== Render Operations
+=== Render Actions
 // tag::render-operations[]
 Presently, all render actions convert AsciiDoc-formatted source files into rich-text documents, such as PDFs and HTML pages.
 LiquiDoc uses Asciidoctor's Ruby engine and various other plugins to generate output in a few supported formats.
@@ -655,7 +655,7 @@ Starting with Jekyll but soon to add more (link:http://awestruct.org[Awestruct] 
 
 LiquiDoc's role is primarily to help your preferred SSG handle your source in ways consistent with any other rendering and file managing your docs codebase requires.
 For example, the jekyll-asciidoc extension that enables Jekyll builds to parse AsciiDoc markup only honors attributes set in Jekyll config files.
-Therefore, just before triggering the build, LiquiDoc writes a new config file from which Jekyll draws AsciiDoc attribute assignments.
+Therefore, just before triggering the build, LiquiDoc loads all the accummulated AsciiDoc parameters into a new config file from which Jekyll draws AsciiDoc attribute assignments.
 
 Jekyll::
 A Jekyll render operation calls `bundle exec jekyll build` from the command line pretty much the way you would do it manually.
@@ -914,25 +914,9 @@ properties::
 Designates a file or files for settings and additional explicit configuration at the build level for render actions.
 // end::render-operations[]
 
-=== Deploy Operations
-
-Mainstream deployment platforms are probably better suited to tying all your operations together, but we plan to bake a few common operations in to help you get started.
-For true build-and-deployment control, consider build tools such as Make, Rake, and Gradle, or deployment tools like Travis CI, CircleCI, and Jenkins.
-
-==== Jekyll Serve
-
-For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving, so we'll start there.
-
-For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
-This will attempt to serve files from the `destination:` set for the associated Jekyll build.
-
-[WARNING]
-LiquiDoc-automated deployment of Jekyll sites is both limited and untested under nonstandard conditions.
-Non-local deployment should be handled by external continuous-integration/devlopment (CICD) tools.
-
 ==== Algolia Search Indexing for Jekyll
 
-If you're using Jekyll to build sites, LiquiDoc makes indexing your files with the Algolia cloud search service a matter of configuration.
+If you're using Jekyll to build sites, LiquiDoc makes indexing your files with the Algolia cloud search service a matter of configuration, not development.
 The heavy lifting is performed by the link:https://community.algolia.com/jekyll-algolia/[jekyll-algolia plugin], but LiquiDoc can handle indexing even a complex site by using the same configuration that built your HTML content (which is what Algolia actually indexes).
 
 [NOTE]
@@ -995,9 +979,109 @@ This operation performs a complete build, including each render operation, befor
 [TIP]
 To add modern site search for your users, add link:https://community.algolia.com/instantsearch.js/[Algolia's InstantSearch functionality] to your front end!
 
+=== Deploy Actions
+
+Mainstream deployment platforms are better suited to tying all your operations together, but we plan to bake a few common operations in to help you get started.
+For true build-and-deployment control, consider build tools such as Make, Rake, and Gradle, or deployment tools like Travis CI, CircleCI, and Jenkins.
+
+==== Jekyll Serve
+
+For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving, so we'll start there.
+
+For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
+This will attempt to serve files from the `destination:` set for the associated Jekyll build.
+
+[WARNING]
+LiquiDoc-automated deployment of Jekyll sites is both limited and untested under nonstandard conditions.
+Non-local deployment should be handled by external continuous-integration/devlopment (CICD) tools.
+
+=== Execute Actions
+
+LiquiDoc lets you invoke shell commands from within a build routine.
+A basic `execute` action requires just two parameters: `action: execute` and `command: <shell command>`.
+
+[IMPORTANT]
+Because shell commands can be dangerous, LiquiDoc will warn you if your config contains any, listing them and prompting you to approve.
+To override this, add `--unsafe` to your `liquidoc` command.
+
+The `command:` value is a string identical to any 1-line shell command, which will be performed in the system's current shell environment (probably Bash).
+
+[source,yaml]
+----
+- action: execute
+  command: git checkout release/docs/3.1.x
+----
+
+An execute action with no options listed will be performed, with results printed to console, if applicable.
+The above command would generate Git feedback, whereas a successful `rm somefile.txt` command would not.
+Failed commands will not cause the LiquiDoc routine to halt; LD will simply move on to the next stage.
+
+To suppress output, add `stdout: false` to `options:`.
+
+[source,yaml]
+----
+- action: execute
+  command: git checkout release/docs/3.1.x
+  options:
+    stdout: false
+----
+
+==== Output to File
+
+To capture the output of a given command, add `options:` to the `execute` instructions.
+Writing results to a file is enabled with the `outfile:` option.
+
+[source,yaml]
+----
+- action: execute
+  command: ls -l imports/product3/
+  options:
+    stdout: true
+    outfile:
+      path: _build/pre/products3_dirlist.stdout
+      prepend: "perms\tqty\tuser\tgroup\tsize\tmonth\tday\ttime\tpath"
+      append: EOF
+----
+
+When writing results to an outfile, optionally insert text at the top or bottom of your new file using `prepend:` and `append:` settings.
+
+.dirlist.stdout--Sample output from the above command
+[source,plaintext]
+----
+perms	qty	user	group	size	month	day	time	path
+total 96
+-rw-r--r--  1 brian  antifa   1833 Jan  8 13:16 intro.adoc
+-rw-r--r--  1 brian  antifa     52 Jan  8 13:16 overview.adoc
+-rw-r--r--  1 brian  antifa  30314 Jan  8 13:16 install.adoc
+-rw-r--r--  1 brian  antifa   5125 Jan  8 13:16 resources.adoc
+EOF
+----
+
+[NOTE]
+When the `outfile:` option is in use, the option `stdout` defaults to `false`.
+Set it to true to capture output in a file _and_ print it to screen.
+
+==== Error Handling
+
+The status of each command is tracked, and errors that result in an exit status of `1` can optionally halt the entire LiquiDoc routine.
+To cause this, you must add an `error:` block to the options, with a child parameter: `response: exit`, as shown above.
+
+[source,yaml]
+----
+- action: execute
+  command: git checkout release/docs/3.1.x
+  options:
+    error:
+      response: exit
+      message: Failed to checkout branch; Make sure local head is clean!
+----
+
+You may optionally provide a second child, `message:` followed by the string users will see when they encounter an error here.
+The default behavior is to continue processing (`response: ignore`).
+
 == Configuring a LiquiDoc Build
 
-Like any software or documentation build tool, routine configuration is everything.
+Like any software or documentation build tool, routine configuration is key.
 Everything needs to be just so in a build.
 Order matters, and resources must be used wisely.
 
@@ -1012,7 +1096,7 @@ For non-geniuses like myself, it can be really helpful to have a plain-English a
 During builds, LiquiDoc creates a secondary log as it churns through a configuration.
 
 If you add no documentation fields to your build config's YAML file, this secondary logger will still generate a plain-language description of the steps it is taking.
-But step can be enhanced with customized comments, as well, to pass along the reasoning behind any step.
+But each step can be enhanced with customized comments, as well, to pass along the reasoning behind any step.
 
 By default these are written “config explainers” to a file stored under your build directory (`_build/pre/config-explainer.adoc` unless otherwise established).
 Alternatively, the log will print to screen (console) during a configured LiquiDoc build procedure.
@@ -1115,7 +1199,7 @@ So long as our `products.yml` file contains a top-level data structure called `w
 
 ==== Eliminating Config Variables
 
-Equally as cool as enabling custom builds by accepting what amount to _environment variables_, we can also handle big, repetative builds with Liquid looping.
+Equally as cool as enabling custom builds by accepting what amount to _environment variables_, we can also handle big, repetitive builds with Liquid looping.
 Let's try that file again with some powerful tweaks.
 
 .Example `build-config.yml` dynamic LiquiDoc configuration for iterative builds
@@ -1158,15 +1242,15 @@ With a configuration like this, our `side-nav.html` template can further process
 [source,html]
 .Example Liquid template (`side-nav.html`) with variables passed
 ----
-{% if vars.env == "staging" %}
+{% if vars.environment == "staging" %}
 {% assign base_url = "http://staging.int.example.com" %}
-{% elsif vars.env == "production" %}
+{% elsif vars.environment == "production" %}
 {% assign base_url = "http://example.com" %}
 {% endif %}
 LiquiDoc {{ vars.product.edition }}
 <ul class="nav">
-{% for page in data.pages %}
-<li><a href="{{ base_url }}/{{ page.path }}">{{ page.name }}</a>
+{% for page in site.data.pages %}
+<li><a href="{{ site.base_url }}/{{ page.path }}">{{ page.name }}</a>
 {% endfor %}
 </ul>
 ----
@@ -1251,18 +1335,18 @@ LiquiDoc supports all link:https://shopify.github.io/liquid/[standard Liquid tag
 Support for link:https://github.com/DocOps/liquidoc-gem/issues/47[Jekyll's include tag] should be coming soon.
 
 [[config-settings-matrix]]
-=== Config Settings Matrix
+=== Config Parameters Matrix
 
-Here is a table of all the established configuration settings, as they pertain to each key LiquiDoc action.
+Here is a table of established configuration settings, as they pertain to each key LiquiDoc action.
 
 // tag::options-table[]
 [cols="3,1,1,1,1",options="header"]
 |===
-| Setting
+| Parameter
 | Parse
 | Migrate
 | Render
-| Deploy
+| Execute
 
 5+s| Main Per-stage Settings
 
@@ -1270,43 +1354,49 @@ s| action
 | Required
 | Required
 | Required
-|
+| Required
 
 s| data
 | Optional
 | N/A
 | Optional
-|
+| N/A
 
 s| source
 | N/A
 | Required
 | Required
-|
+| N/A
 
 s| target
 | N/A
 | Required
 | N/A
-|
+| N/A
+
+s| command
+| N/A
+| N/A
+| N/A
+| Required
 
 s| options
 | N/A
 | Optional
 | Optional
-|
+| Optional
 
 s| stage
 | Optional
 | Optional
 | Optional
-|
+| Optional
 
 s| builds
 | Required
 | N/A
 | Required
-|
+| N/A
 
 5+s| Per-Build Settings
 
@@ -1314,59 +1404,80 @@ s| output
 | Required
 | N/A
 | Optional*
-|
+| N/A
 
 s| backend
 | N/A
 | N/A
 | Optional
-|
+| N/A
 
 s| config
 | N/A
 | N/A
 | Optional
-|
+| N/A
 
 s| template
 | Optional
 | N/A
 | N/A
-|
+| N/A
 
 s| style
 | N/A
 | N/A
 | Optional
-|
+| N/A
 
 s| attributes
 | N/A
 | N/A
 | Optional
-|
+| N/A
 
 s| variables
 | Optional
 | N/A
 | N/A
-|
+| N/A
 
 s| properties
 | N/A
 | N/A
 | Optional
-|
-
+| N/A
 s| search
 | N/A
 | N/A
 | Optional
-|
+| N/A
 |===
 
 pass:[*]The `output` setting is considered optional for render operations because static site generations target a directory set in the SSG's config file.
 // end::options-table[]
+
+=== Per-stage Options Params
+
+[cols="1,1,1,1",options="header"]
+|===
+| Parameter
+| Actions
+| Type
+| Default
+
+| inclusive
+| migrate
+| boolean
+| `true`
+
+| missing
+| migrate
+| string
+| `exit`
+
+|
+|===
 
 == Meta
 // tag::meta[]
