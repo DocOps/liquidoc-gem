@@ -1078,6 +1078,7 @@ The default behavior is to continue processing (`response: ignore`).
 ----
 
 You may optionally provide a second child, `message:` followed by the string users will see when they encounter an error here.
+If the command throws an error, this message will appear, even if you choose not to exit processing.
 
 == Configuring a LiquiDoc Build
 
