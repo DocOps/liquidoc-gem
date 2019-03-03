@@ -11,6 +11,7 @@ require 'crack/xml'
 require 'fileutils'
 require 'jekyll'
 require 'open3'
+require 'highline'
 
 # ===
 # Table of Contents
@@ -54,6 +55,7 @@ require 'open3'
 @explicit = false
 @search_index = false
 @search_index_dry = ''
+@safemode = true
 
 # Instantiate the main Logger object, which is always running
 @logger = Logger.new(STDOUT)
@@ -96,6 +98,20 @@ def config_build config_file, config_vars={}, parse=false
     raise "ConfigFileError"
   end
   cfg = BuildConfig.new(config) # convert the config file to a new object called 'cfg'
+  if @safemode
+    commands = ""
+    cfg.steps.each do |step|
+      if step['action'] == "execute"
+        commands = commands + "> " + step['command'] + "\n"
+      end
+    end
+    if commands.length
+      puts "\nWARNING: This routine will execute the following shell commands:\n\n#{commands}"
+      ui = HighLine.new
+      answer = ui.ask("\nDo you approve? (YES/no): ")
+      raise "CommandExecutionsNotAuthorized" unless answer.strip == "YES"
+    end
+  end
   iterate_build(cfg)
 end
 
@@ -1265,6 +1281,10 @@ command_parser = OptionParser.new do|opts|
 
   opts.on("--parse-config", "Preprocess the designated configuration file as a Liquid template. Superfluous when passing -v/--var arguments.") do
     @parseconfig = true
+  end
+
+  opts.on("--unsafe", "Enable shell command executions without interactive check.") do
+    @safemode = false
   end
 
   opts.on("-h", "--help", "Returns help.") do
