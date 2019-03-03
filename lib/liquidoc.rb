@@ -10,6 +10,7 @@ require 'csv'
 require 'crack/xml'
 require 'fileutils'
 require 'jekyll'
+require 'open3'
 
 # ===
 # Table of Contents
@@ -144,6 +145,9 @@ def iterate_build cfg
     when "deploy"
       @logger.warn "Deploy actions are limited and experimental."
       jekyll_serve(build)
+    when "execute"
+      @logger.info "Executing shell command: #{step.command}"
+      execute_command(step)
     else
       @logger.warn "The action `#{type}` is not valid."
     end
@@ -280,6 +284,10 @@ class BuildConfigStep
     return @step['options']
   end
 
+  def command
+    return @step['command']
+  end
+
   def stage
     return @step['stage']
   end
@@ -345,6 +353,8 @@ class BuildConfigStep
       reqs = ["source,target"]
     when "render"
       reqs = ["builds"]
+    when "execute"
+      reqs = ["command"]
     end
     for req in reqs
       if (defined?(@step[req])).nil?
@@ -924,9 +934,6 @@ def asciidocify doc, build
   if build.backend == "pdf"
     @logger.info "Generating PDF. This can take some time..."
   end
-
-
-
   Asciidoctor.convert_file(
     doc.index,
     to_file: to_file,
@@ -1014,6 +1021,38 @@ def algolia_index_cmd build, apikey=nil, args
       return false
     else
       return "ALGOLIA_INDEX_NAME='#{build.search['index']}' ALGOLIA_API_KEY='#{apikey}' bundle exec jekyll algolia #{@search_index_dry} #{args} "
+    end
+  end
+end
+
+# ===
+# Execute
+# ===
+
+def execute_command cmd
+  stdout, stderr, status = Open3.capture3(cmd.command)
+  failed = true if status.to_s.include?("exit 1")
+  unless cmd.options
+    puts stdout
+    puts stderr if failed
+  else
+    if failed && cmd.options['error']
+      @logger.warn cmd.options['error']['message'] if cmd.options['error']['message']
+      if cmd.options['error']['response'] == "exit"
+        @logger.error "Command failure: #{stderr}"
+        raise "CommandExecutionException"
+      end
+    end
+    if cmd.options['outfile']
+      contents = stdout
+      if cmd.options['outfile']
+        contents = "#{cmd.options['outfile']['prepend']}\n#{stdout}" if cmd.options['outfile']['prepend']
+        contents = "#{stdout}/n#{cmd.options['outfile']['append']}" if cmd.options['outfile']['append']
+        generate_file(contents, cmd.options['outfile']['path'])
+      end
+      if cmd.options['stdout']
+        puts stdout
+      end
     end
   end
 end
