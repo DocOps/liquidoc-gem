@@ -162,7 +162,7 @@ Here is very simple build routine instructed by a LiquiDoc config:
 
 <1> The top-level `-` denotes a new, consecutively executed “step” in the build.
 The `action:` parameter determines what type of action this step will perform.
-The options are `parse`, `migrate`, `render`, and `execute`.
+The options are `parse`, `migrate`, `render`, `deploy`, and `execute`.
 
 <2> If the `data:` setting's value is a string, it must be the filename of a format automatically recognized by LiquiDoc: `.yml`, `.json`, `.xml`, or `.csv`.
 Otherwise, `data:` must contain subordinate settings for `file:` and `type:`.
@@ -1045,14 +1045,14 @@ Writing results to a file is enabled with the `outfile:` option.
 
 When writing results to an outfile, optionally insert text at the top or bottom of your new file using `prepend:` and `append:` settings.
 
-.dirlist.stdout--Sample output from the above command
+.products3_dirlist.stdout--Sample output from the above command
 [source,plaintext]
 ----
 perms	qty	user	group	size	month	day	time	path
 total 96
+-rw-r--r--  1 brian  antifa  30314 Jan  8 13:16 install.adoc
 -rw-r--r--  1 brian  antifa   1833 Jan  8 13:16 intro.adoc
 -rw-r--r--  1 brian  antifa     52 Jan  8 13:16 overview.adoc
--rw-r--r--  1 brian  antifa  30314 Jan  8 13:16 install.adoc
 -rw-r--r--  1 brian  antifa   5125 Jan  8 13:16 resources.adoc
 EOF
 ----
@@ -1256,7 +1256,7 @@ LiquiDoc {{ vars.product.edition }}
 </ul>
 ----
 
-To set the values of `vars.edition` and `vars.env` in the config file, add for instance `--var edition=basic --var env=staging`
+To set the values of `vars.edition` and `vars.environment` in the config file, add for instance `--var edition=basic --var environment=staging`
 
 ==== Constraining Build Options with Dynamic Configuration
 
@@ -1318,7 +1318,7 @@ Review this code and imagine how much vertical space is saved.
 {% endfor %}
 ----
 
-This code saves the space and maintenance of five `-output:` blocks.
+This code saves the space and maintenance of five `output:` blocks.
 
 [TIP]
 In Liquid, loops can only iterate through arrays.
@@ -1491,7 +1491,6 @@ To me, it's one of the most elegant ideas I've ever worked on, and I actually ad
 Maybe it's due to my love of flat files.
 The simplicity of _anything in / anything out_ for plaintext files is such a holy grail in my mind.
 I am a huge fan of the universal converter link:http://pandoc.org/[Pandoc], which has saved me countless hours of struggle.
-
 
 I totally dig _markup languages_ and _dynamic template engines_, both of which I've been using to build cool shit for about 20 years.
 These form the direct sublayers of everything done with textual content in computing, and I want to help others play in the sandbox of dynamic markup.
