@@ -1458,28 +1458,6 @@ s| search
 pass:[*]The `output` setting is considered optional for render operations because static site generations target a directory set in the SSG's config file.
 // end::options-table[]
 
-=== Per-stage Options Params
-
-[cols="1,1,1,1",options="header"]
-|===
-| Parameter
-| Actions
-| Type
-| Default
-
-| inclusive
-| migrate
-| boolean
-| `true`
-
-| missing
-| migrate
-| string
-| `exit`
-
-|
-|===
-
 == Meta
 // tag::meta[]
 I get that this is the least sexy tool anyone has ever built.
