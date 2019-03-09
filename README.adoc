@@ -82,12 +82,6 @@ See https://rubyinstaller.org/downloads[rubyinstaller.org] if you're on Windows.
 ----
 source 'https://rubygems.org'
 
-gem 'json'
-gem 'liquid'
-gem 'asciidoctor'
-gem 'asciidoctor-pdf'
-gem 'logger'
-gem 'crack'
 gem 'liquidoc'
 ----
 +
