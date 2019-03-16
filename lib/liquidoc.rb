@@ -40,6 +40,7 @@ require 'highline'
 @configs_dir = @base_dir + '_configs'
 @templates_dir = @base_dir + '_templates/'
 @data_dir = @base_dir + '_data/'
+@data_file = nil
 @attributes_file_def = '_data/asciidoctor.yml'
 @attributes_file = @attributes_file_def
 @pdf_theme_file = 'theme/pdf-theme.yml'
@@ -82,7 +83,9 @@ def config_build config_file, config_vars={}, parse=false
   # If config variables are passed on the CLI, we want to parse the config file
   # and use the parsed version for the rest fo this routine
     config_out = "#{@build_dir}/pre/#{File.basename(config_file)}"
-    liquify(nil,config_file, config_out, config_vars)
+    vars = DataObj.new()
+    vars.add_data!("vars", config_vars)
+    liquify(vars, config_file, config_out)
     config_file = config_out
     @logger.debug "Config parsed! Using #{config_out} for build."
     validate_file_input(config_file, "config")
@@ -124,18 +127,46 @@ def iterate_build cfg
     type = step.type
     case type # a switch to evaluate the 'action' parameter for each step in the iteration...
     when "parse"
-      if step.data
-        data = DataSrc.new(step.data)
-      end
       builds = step.builds
+      data_obj = DataObj.new()
+      if step.data
+        data_files = DataFiles.new(step.data)
+        data_files.sources.each do |src|
+          begin
+            data = ingest_data(src) # Extract data from file
+          rescue Exception => ex
+            @logger.error "#{ex.class}: #{ex.message}"
+            raise "DataFileReadFail (#{src.file})"
+          end
+          begin # Create build.data
+            if data_files.sources.size == 1
+              data_obj.add_data!("", data) if data.is_a? Hash
+              # Insert arrays into the data. scope, and for backward compatibility, hashes as well
+              data_obj.add_data!("data", data)
+            else
+              data_obj.add_data!(src.name, data) # Insert object under self-named scope
+            end
+          rescue Exception => ex
+            @logger.error "#{ex.class}: #{ex.message}"
+            raise "DataIngestFail (#{src.file})"
+          end
+        end
+      end
       builds.each do |bld|
-        build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
+        build = Build.new(bld, type, data_obj) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
+          # Prep & perform a Liquid-parsed build build
           @explainer.info build.message
-          build.add_vars!(@passed_vars) unless @passed_vars.empty?
-          liquify(data, build.template, build.output, build.variables) # perform the liquify operation
-        else
-          regurgidata(data, build.output)
+          build.add_data!("vars", build.variables) if build.variables
+          liquify(build.data, build.template, build.output) # perform the liquify operation
+        else # Prep & perform a direct conversion
+          # Delete nested data and vars objects
+          build.data.remove_scope("data")
+          build.data.remove_scope("vars")
+          # Add vars from CLI or config args
+          build.data.add_data!("", build.variables) unless build.variables.empty?
+          build.data.add_data!("", @passed_vars) unless @passed_vars.empty?
+          regurgidata(build.data, build.output)
         end
       end
     when "migrate"
@@ -151,7 +182,7 @@ def iterate_build cfg
       builds = step.builds
       for bld in builds
         doc = AsciiDocument.new(step.source)
-        attrs = ingest_attributes(step.data) if step.data # Set attributes from from YAML files
+        attrs = ingest_attributes(step.data) if step.data # Set attributes from YAML files
         doc.add_attrs!(attrs) # Set attributes from the action-level data file
         build = Build.new(bld, type) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type' string
         build.set("backend", derive_backend(doc.type, build.output) ) unless build.backend
@@ -169,6 +200,10 @@ def iterate_build cfg
     end
   end
 end
+
+# ===
+# Helper procs
+# ===
 
 # Verify files exist
 def validate_file_input file, type
@@ -401,11 +436,12 @@ end #class Action
 
 class Build
 
-  def initialize build, type
+  def initialize build, type, data=DataObj.new
     build['attributes'] = Hash.new unless build['attributes']
     build['props'] = build['properties'] if build['properties']
     @build = build
     @type = type
+    @data = data
     @build['variables'] = {} unless @build['variables']
   end
 
@@ -434,13 +470,22 @@ class Build
   end
 
   def variables
+    # Variables added in the config build:variables: param
+    # Not for manipulation
     @build['variables']
   end
 
-  def add_vars! vars
-      vars.to_h unless vars.is_a? Hash
-      self.variables.merge!vars
+  def data
+    @data unless @data.nil?
   end
+
+  def add_data! obj, scope
+    @data.add_data!(obj, scope)
+  end
+
+  # def vars
+  #   self.data['vars']
+  # end
 
   def message
     # dynamically build a message, possibly appending a reason
@@ -503,10 +548,6 @@ class Build
       Array.new
     end
   end
-
-  # def prop_files_list # force the array back to a list of files (for CLI)
-  #   props['files'].force_array if props['files']
-  # end
 
   def search
     props['search']
@@ -572,31 +613,28 @@ end # class Build
 
 class DataSrc
   # initialization means establishing a proper hash for the 'data' param
-  def initialize datasrc
+  def initialize sources
     @datasrc = {}
-    @datasrc['file'] = datasrc
+    @datasrc['file'] = sources
     @datasrc['ext'] = ''
-    @datasrc['type'] = false
-    @datasrc['pattern'] = false
-    if datasrc.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
-      @datasrc['file'] = datasrc['file']
-      @datasrc['ext'] = File.extname(datasrc['file'])
-      if (defined?(datasrc['pattern']))
-        @datasrc['pattern'] = datasrc['pattern']
+    @datasrc['pattern'] = nil
+    if sources.is_a? Hash # data var is a hash, so add 'ext' to it by extracting it from filename
+      @datasrc['file'] = sources['file']
+      @datasrc['ext'] = File.extname(sources['file'])
+      if (defined?(sources['pattern']))
+        @datasrc['pattern'] = sources['pattern']
       end
-      if (defined?(datasrc['type']))
-        @datasrc['type'] = datasrc['type']
+      if (defined?(sources['type']))
+        @datasrc['type'] = sources['type']
+      end
+    elsif sources.is_a? String
+      @datasrc['ext'] = File.extname(sources)
+    elsif sources.is_a? Array
+      sources.each do |src|
+        @datasrc['name'] = File.basename(@datasrc['file'])
       end
     else
-      if datasrc.is_a? String
-        @datasrc['ext'] = File.extname(datasrc)
-      else
-        if datasrc.is_a? Array
-
-        else
-          raise "InvalidDataSource"
-        end
-      end
+      raise "InvalidDataSource"
     end
   end
 
@@ -606,6 +644,10 @@ class DataSrc
 
   def ext
     @datasrc['ext']
+  end
+
+  def name
+    File.basename(self.file,File.extname(self.file))
   end
 
   def type
@@ -619,7 +661,7 @@ class DataSrc
         # @logger.error "Data file extension must be one of: .yml, .json, .xml, or .csv or else declared in config file."
         raise "FileExtensionUnknown"
       end
-      datatype = @datasrc['ext']
+      datatype = self.ext
       datatype = datatype[1..-1] # removes leading dot char
     end
     unless datatype.downcase.match(/yml|json|xml|csv|regex/) # 'type' must be one of these permitted vals
@@ -632,6 +674,68 @@ class DataSrc
   def pattern
     @datasrc['pattern']
   end
+end # class DataSrc
+
+# DataFiles
+class DataFiles
+  # Accepts a single String, Hash, or Array
+  # String must be a filename
+  # Hash must contain :file and optionally :type and :pattern
+  # Array must contain filenames as strings
+  # Returns array of DataSrc objects
+  def initialize data_sources
+    @data_sources = []
+    if data_sources.is_a? Array
+      data_sources.each do |src|
+        @data_sources << DataSrc.new(src)
+      end
+    else # data_sources is String or Hash
+      @data_sources[0] = DataSrc.new(data_sources)
+    end
+    @src_class = data_sources.class
+  end
+
+  def sources
+    @data_sources
+  end
+
+  def type
+    # returns the original class of the object used to init this obj
+    @src_class
+  end
+
+end
+
+class DataObj
+  # DataObj
+  #
+  # Scoped variables for feeding a Liquid parsing operation
+  def initialize
+    @data = {"vars" => {}}
+  end
+
+  def add_data! scope="", data
+    # Merges data into existing scope or creates a new scope
+    if scope.empty? # store new object at root of this object
+      self.data.merge!data
+    else # store new object as a subordinate, named object
+      if self.data.key?(scope) # merge into existing key
+        self.data[scope].merge!data
+      else # create a new key named after the scope
+        scoped_hash = { scope => data }
+        self.data.merge!scoped_hash
+      end
+    end
+  end
+
+  def data
+    @data
+  end
+
+  def remove_scope scope
+    self.data.delete(scope)
+  end
+
 end
 
 class AsciiDocument
@@ -660,31 +764,15 @@ class AsciiDocument
   end
 end
 
-class AsciiDoctorConfig
-  def initialize  out, type, back
-
-  end
-end
-
 # ===
 # Action-specific procs
 # ===
 # PARSE-type build procs
 # ===
 
-# Get data
-def get_data datasrc
-  @logger.debug "Executing liquify parsing operation."
-  if datasrc.is_a? String
-    datasrc = DataSrc.new(datasrc)
-  end
-  validate_file_input(datasrc.file, "data")
-  return ingest_data(datasrc)
-end
-
 # Pull in a semi-structured data file, converting contents to a Ruby hash
 def ingest_data datasrc
-  raise "InvalidDataObject" unless datasrc.is_a? Object
+  raise "InvalidDataSrcObject" unless datasrc.is_a? DataSrc
   case datasrc.type
   when "yml"
     begin
@@ -724,9 +812,6 @@ def ingest_data datasrc
       raise "MissingRegexPattern"
     end
   end
-  if data.is_a? Array
-    data = {"data" => data}
-  end
   return data
 end
 
@@ -757,29 +842,12 @@ def parse_regex data_file, pattern
 end
 
 # Parse given data using given template, generating given output
-def liquify datasrc, template_file, output, variables=nil
-  if datasrc
-    input = get_data(datasrc)
-    nested = { "data" => get_data(datasrc)}
-    input.merge!nested
-  end
-  if variables
-    if input
-      input.merge!variables
-    else
-      input = variables
-    end
-  end
-  @logger.error "Parse operations need at least a data file or variables." unless input
+def liquify data_obj, template_file, output
   validate_file_input(template_file, "template")
-  if variables
-    vars = { "vars" => variables }
-    input.merge!vars
-  end
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
-    rendered = template.render(input) # renders the output
+    rendered = template.render(data_obj.data) # renders the output
   rescue Exception => ex
     message = "Problem rendering Liquid template. #{template_file}\n" \
       "#{ex.class} thrown. #{ex.message}"
@@ -794,14 +862,33 @@ def liquify datasrc, template_file, output, variables=nil
   end
 end
 
-def regurgidata datasrc, output
-  data = get_data(datasrc)
+def cli_liquify data_file=nil, template_file=nil, output_file=nil, passed_vars
+  # converts command-line options into liquify or regurgidata inputs
+  data_obj = DataObj.new()
+  if data_file
+    df = DataFiles.new(data_file)
+    ingested = ingest_data(df.sources[0])
+    data_obj.add_data!("", ingested)
+  end
+  if template_file
+    data_obj.add_data!("data", ingested) if df
+    data_obj.add_data!("vars", passed_vars) if passed_vars
+    liquify(data_obj, template_file, output_file)
+  else
+    data_obj.remove_scope("vars")
+    data_obj.add_data!("", passed_vars) if passed_vars
+    regurgidata(data_obj, output_file)
+  end
+end
+
+def regurgidata data_obj, output
+  # converts data files from one format directly to another
   raise "UnrecognizedFileExtension" unless File.extname(output).match(/\.yml|\.json|\.xml|\.csv/)
   case File.extname(output)
     when ".yml"
-      new_data = data.to_yaml
+      new_data = data_obj.data.to_yaml
     when ".json"
-      new_data = data.to_json
+      new_data = data_obj.data.to_json
     when ".xml"
       @logger.warn "XML output not yet implemented."
     when ".csv"
@@ -809,9 +896,11 @@ def regurgidata datasrc, output
   end
   if new_data
     begin
-      File.open(output, 'w') { |file| file.write(new_data) }
+      generate_file(new_data, output)
+      # File.open(output, 'w') { |file| file.write(new_data) }
       @logger.info "Data converted and saved to #{output}."
-    rescue
+    rescue Exception => ex
+      @logger.error "#{ex.class}: #{ex.message}"
       raise "FileWriteError"
     end
   end
@@ -879,7 +968,7 @@ def ingest_attributes attr_file
         begin
           new_attrs = new_attrs[block_name]
         rescue
-          raise "InvalidAttributesBlock"
+          raise "InvalidAttributesBlock (#{filename}:#{block_name})"
         end
       end
     rescue Exception => ex
@@ -1308,7 +1397,7 @@ explainer_init
 unless @config_file
   @logger.debug "Executing config-free build based on API/CLI arguments alone."
   if @data_file
-    liquify(@data_file, @template_file, @output_file, @passed_vars)
+    cli_liquify(@data_file, @template_file, @output_file, @passed_vars)
   end
   if @index_file
     @logger.warn "Rendering via command line arguments is not yet implemented. Use a config file."

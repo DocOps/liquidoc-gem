@@ -4,8 +4,63 @@ Shopify's open-source link:https://help.shopify.com/themes/liquid/basics[*Liquid
 For instance, a data structure of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
 
 Any valid Liquid-formatted template is accepted, in the form of a text file with any extension.
-For data sourced in CSV format or extracted through regex source parsing, all data is passed to the Liquid template parser as an array called `data:`, containing one or more rows to be iterated through.
-Data sourced in YAML, XML, or JSON may be passed as complex structures with custom names determined in the file contents.
+
+== Data Objects
+
+Ingested data objects can take the form of serialized arrays or non-serialized structures.
+
+For data sourced in <<csv_data,CSV format>> or extracted through regex source parsing, all data is passed to the Liquid template parser as an *array* object called `data`, containing one or more “rows” of data.
+This extends to YAML and JSON data formed as serialized at their root.
+
+.Example serialized YAML array
+[source,yaml]
+----
+- Item1
+- Item2
+----
+
+.Example serialized JSON array
+[source,json]
+----
+[
+	"Item1",
+	"Item2"
+]
+----
+
+Once ingested, such data can be expressed using the `data.` scope.
+
+[source,liquid]
+----
+{% for i in data %}
+* {{i}}
+{% endfor %}
+----
+
+XML files typically contains arrays/collections nested in parent elements.
+
+[source,xml]
+----
+<items>
+  <item>Item1</item>
+  <item>Item2</item>
+</items>
+----
+
+For nested arrays of this type, the key name is that of the containing element.
+
+[source,liquid]
+----
+{% for i in items %}
+* {{i}}
+{% endfor %}
+----
+
+Data sourced as non-serialized structures in YAML, XML, or JSON may be similarly expressed, using their nested identifiers, with keys determined in the origin contents.
+
+Additional variables passed during gem execution may be expressed under the `vars.` scope (`{{vars.variable_key}}`) or at the root (`{{variable_key}}`, for <<action-parse#default-output-conversions,direct conversions>>).
+
+== Iteration
 
 Looping through known data formats is fairly straightforward.
 A _for_ loop iterates through your data, item by item.
