@@ -8,13 +8,24 @@ Valid data sources come in a few different types.
 There are the built-in data types (YAML, JSON, XML, CSV) vs free-form type (files processed using regular expressions, designated by the `regex` data type).
 There is also a divide between simple one-record-per-line data types (CSV and regex), which produce one set of parameters for every line in the source file, versus nested data types that can reflect far more complex structures.
 
+[[native-nested-data]]
 === Native Nested Data (YAML, JSON, XML)
 
 The native nested formats are actually the most straightforward.
 So long as your filename has a conventional extension, you can just pass a file path for this setting.
 That is, if your file ends in `.yml`, `.json`, or `.xml`, and your data is properly formatted, LiquiDoc will parse it appropriately.
 
-For standard-format files that have non-standard file extensions (for example, `.js` rather than `.json` for a JSON-formatted file), you must declare a type explicitly.
+[source,yaml]
+.Example config -- conventional, single-source parsing action
+----
+- action: parse
+  data: _data/source_data_file.json
+  builds:
+    - template: _templates/liquid_template.html
+      output: _output/output_file.html
+----
+
+For standard-format files that have nonstandard file extensions (for example, `.js` rather than `.json` for a JSON-formatted file), you must declare a type explicitly.
 
 [source,yaml]
 .Example config -- Instructing correct type for mislabeled JSON file
@@ -30,6 +41,7 @@ For standard-format files that have non-standard file extensions (for example, `
 
 Once LiquiDoc knows the right file type, it will parse the file into a Ruby object for further processing.
 
+[[csv-data]]
 === CSV Data
 
 Data ingested from CSV files will use the first row as key names for columnar data in the subsequent rows, as shown below.
@@ -59,7 +71,8 @@ data[1].default #=> 300
 data[1].required #=> false
 ----
 
-=== Unstructured Data
+[[unstructured-data]]
+=== Unstructured Data Ingest
 
 Unstructured data files can be ingested as well, as long as records are delineated by lines (as with CSV) _and_ each line meets a consistent pattern we can “scrape” for data to organize.
 This method generates arrays of structures similarly to the CSV approach.
@@ -154,7 +167,8 @@ Your pattern must contain at least one group, denoted with unescaped `(` and `)`
 This will be expressed during logging, and eventually it will enable us to suppress or reorder steps by name (see link:https://github.com/DocOps/liquidoc-gem/issues/33[Issue #33]).
 ****
 
-== Default Output Formats
+[[default-output-conversions]]
+== Default Output Formats (Direct Conversions)
 
 LiquiDoc can directly convert any supported semi-structured data input format to either YAML or JSON output.
 Simply provide no template parameter, and make sure the output file has a proper extension (`.yml` or `.json`).
@@ -164,7 +178,8 @@ Simply provide no template parameter, and make sure the output file has a proper
 ----
 - action: parse
   data: _data/testdata.xml
-  output: _build/frontend/testdata.json
+  builds:
+    - output: _build/frontend/testdata.json
 ----
 
 [NOTE]
@@ -183,7 +198,9 @@ endif::[]
 
 == Passing Additional Variables
 
-In addition to data files, parse operations accept fixed variables and environment variables.
+In addition to (or instead of) data files, parse operations accept fixed variables and environment variables.
+
+=== Fixed/Config Variables
 
 *Fixed variables* are defined using a _per-build_ structure called `variables:` in the config file.
 Each build operation can accept a distinct set of variables.
@@ -226,6 +243,99 @@ Inside that template, we might find a block of Liquid code hiding some navigatio
 
 This portion of the example config presses two versions of the Liquid template `side-nav.html` into two different nav menus, either to be served on two parallel sites or one site with the ability to select front-end elements depending on user status.
 In this example, only the menu shown to premium users will contain the billing link; basic users will see an upgrade prompt.
+
+=== Environment/Execution Variables
+
+The other way to pass variables into builds is during the execution of the LiquiDoc gem.
+When performing a configured build, pass config variables to a *dynamic configuration* file in order to trigger different settings or routines, as documented in <<dynamic-config>>.
+
+[[passing-vars-default-output]]
+=== Passing Variables to Direct Conversions
+
+Data being converted directly to a default output format is also eligible for injection of variables from the command line or config file.
+
+.Example command-line LiquiDoc conversion with variables added
+[source,shell]
+bundle exec liquidoc -d data/original.xml -o _build/converted.json -v env=staging -v lang=en-us
+
+[NOTE]
+The previous example command is functionally identical to the following configuration step.
+
+.Example configured LiquiDoc conversion with variables added
+[source,yaml]
+----
+- action: parse
+  data: data/original.xml
+  builds:
+    - output: _build/converted.json
+      variables:
+        env: staging
+        lang: en-us
+----
+
+If `original.xml` contains one key-value pair (`<test>true</test>`), the resulting JSON will situate additional variables alongside it.
+
+.Example direct-conversion output (“prettified” for docs)
+[source,json]
+----
+{
+  "test": true,
+  "env": "staging",
+  "lang": "en-us"
+}
+----
+
+[[multi-file-ingest]]
+== Multiple File Ingest
+
+Parse actions can ingest an indefinite number of data sources, with some restrictions.
+
+The parse action's `data:` parameter can accept an array of paths to any supported semi-structured data format, given the following standard file extensions (`.csv`, `.yml`, `.json`, `.xml`).
+Any other file, whether <<unstructured-data,nonstandard format>> or <<native-nested-data,nonstandard file extension>>, must first be converted to a standard format.
+
+[source,yaml]
+.Example config -- Multi datasource ingest
+----
+- action: parse
+  data:
+    - lib/strings/common-en.json
+    - data/app-strings.yml
+    - lang/settings.xml
+  builds:
+    - template: _templates/env-config.liquid.yaml
+      output: target/env-config-lang.yml
+      variables:
+        language:
+          short: en
+          full: English
+    - template: all-strings.liquid.json
+      output: all-strings.json
+----
+
+In this example, we imagine generating a couple of files useful to different parts of a documentation app, including common strings and language settings.
+In each Liquid template, we have access to several data objects.
+
+The `vars.` scope carries anything passed as `variables:` in the build step. For example, `{{vars.language.full}}` would resolve to `English` in this example build.
+
+For the ingested files, a scope is named after the source filename, minus its extension.
+In the above example, we could access variables from `common-en.json` as `{{common-en.keyname}}`, and so forth.
+
+[WARNING]
+Base filenames of files ingested in the same parse action must be distinct.
+
+LiquiDoc's multi-file datasource ingest works very similarly to Jekyll's templating, where always-available data objects are derived from files in the data directory.
+The key difference is that files must be explicitly listed for each parse action in order for their data to be available.
+
+This functionality also resembles the multi-file attributes ingest in render operations, using the same parameter, `data:`.
+But whereas attribute-file ingest accepts a <<more-attributes-data,sub-data block indicator>>, this feature is redundant and thus not available in parse operations.
+Entire files are ingested and passed to the designated templates during parsing.
+
+=== Converting Multiple Data Files to a Default Format
+
+Just as LiquiDoc will objectify a series of data files for a templated conversion, it can also merge numerous files into a unified data object and output it as a single JSON or YAML file.
+The resulting data file will carry an object named for each file, as with standard multi-file ingest, and any passed variables are situated at the root.
+
+See <<default-output-conversions>> and <<passing-vars-default-output>>.
 
 == Output
 

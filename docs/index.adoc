@@ -37,26 +37,34 @@ include::../README.adoc[tags="installation"]
 
 :leveloffset: +1
 
+[[intro]]
 include::topics/intro.adoc[]
 
+[[parsing-basic]]
 include::topics/parsing_basic.adoc[]
 
+[[config-basic]]
 include::topics/config_basic.adoc[]
 
+[[action-parse]]
 include::topics/action_parse.adoc[]
 
+[[action-migrate]]
 include::topics/action_migrate.adoc[]
 
+[[action-render]]
 include::topics/action_render.adoc[]
 
+[[action-deploy]]
 include::topics/action_deploy.adoc[]
 
+[[action-execute]]
 include::topics/action_execute.adoc[]
 
-include::topics/action_execute.adoc[]
-
+[[config-full]]
 include::topics/config_full.adoc[]
 
+[[reference]]
 include::topics/reference.adoc[]
 
 :leveloffset: -1
