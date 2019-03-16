@@ -130,7 +130,7 @@ The order of substitution is as follows.
 . <<per-build-liquidoc-config,per-build in LiquiDoc config>>
 . <<command-line-arguments,command-line arguments>>
 
-After that, we'll demonstrate even <<more-data,more ways to ingest datasets>>.
+After that, we'll demonstrate even <<more-attributes-data,more ways to ingest datasets>>.
 
 [[asciidoc-doc-inline]]
 AsciiDoc document inline::
@@ -244,7 +244,7 @@ You may pass as many attributes as you like this way, up to the capacity of your
 bundle exec liquidoc -c _configs/my_book.yml -a edition='Very Special NSFW'
 ----
 
-[[more-data]]
+[[more-attributes-data]]
 == More ways to Ingest Attributes Data
 
 multiple attribute files::
