@@ -10,6 +10,8 @@ require 'csv'
 require 'crack/xml'
 require 'fileutils'
 require 'jekyll'
+require 'open3'
+require 'highline'
 
 # ===
 # Table of Contents
@@ -53,6 +55,7 @@ require 'jekyll'
 @explicit = false
 @search_index = false
 @search_index_dry = ''
+@safemode = true
 
 # Instantiate the main Logger object, which is always running
 @logger = Logger.new(STDOUT)
@@ -95,6 +98,20 @@ def config_build config_file, config_vars={}, parse=false
     raise "ConfigFileError"
   end
   cfg = BuildConfig.new(config) # convert the config file to a new object called 'cfg'
+  if @safemode
+    commands = ""
+    cfg.steps.each do |step|
+      if step['action'] == "execute"
+        commands = commands + "> " + step['command'] + "\n"
+      end
+    end
+    if commands.length
+      puts "\nWARNING: This routine will execute the following shell commands:\n\n#{commands}"
+      ui = HighLine.new
+      answer = ui.ask("\nDo you approve? (YES/no): ")
+      raise "CommandExecutionsNotAuthorized" unless answer.strip == "YES"
+    end
+  end
   iterate_build(cfg)
 end
 
@@ -144,6 +161,9 @@ def iterate_build cfg
     when "deploy"
       @logger.warn "Deploy actions are limited and experimental."
       jekyll_serve(build)
+    when "execute"
+      @logger.info "Executing shell command: #{step.command}"
+      execute_command(step)
     else
       @logger.warn "The action `#{type}` is not valid."
     end
@@ -210,6 +230,23 @@ def explainer_init out=nil
     @explainer.formatter = proc do |severity, datetime, progname, msg|
       "#{msg}\n"
     end
+  end
+end
+
+def generate_file content, target
+  base_path = File.dirname(target)
+  begin
+    FileUtils::mkdir_p(base_path) unless File.exists?(base_path)
+    File.open(target, 'w') { |file| file.write(content) } # saves file
+  rescue Exception => ex
+    @logger.error "Failed to save output.\n#{ex.class} #{ex.message}"
+    raise "FileNotBuilt"
+  end
+  if File.exists?(target)
+    @logger.info "File built: #{target}"
+  else
+    @logger.error "Hrmp! File not built."
+    raise "FileNotBuilt"
   end
 end
 
@@ -280,6 +317,10 @@ class BuildConfigStep
     return @step['options']
   end
 
+  def command
+    return @step['command']
+  end
+
   def stage
     return @step['stage']
   end
@@ -345,6 +386,8 @@ class BuildConfigStep
       reqs = ["source,target"]
     when "render"
       reqs = ["builds"]
+    when "execute"
+      reqs = ["command"]
     end
     for req in reqs
       if (defined?(@step[req])).nil?
@@ -745,20 +788,7 @@ def liquify datasrc, template_file, output, variables=nil
   end
   unless output.downcase == "stdout"
     output_file = output
-    base_path = File.dirname(output)
-    begin
-      FileUtils::mkdir_p(base_path) unless File.exists?(base_path)
-      File.open(output_file, 'w') { |file| file.write(rendered) } # saves file
-    rescue Exception => ex
-      @logger.error "Failed to save output.\n#{ex.class} #{ex.message}"
-      raise "FileNotBuilt"
-    end
-    if File.exists?(output_file)
-      @logger.info "File built: #{output_file}"
-    else
-      @logger.error "Hrmp! File not built."
-      raise "FileNotBuilt"
-    end
+    generate_file(rendered, output_file)
   else # if stdout
     puts "========\nOUTPUT: Rendered with template #{template_file}:\n\n#{rendered}\n"
   end
@@ -924,9 +954,6 @@ def asciidocify doc, build
   if build.backend == "pdf"
     @logger.info "Generating PDF. This can take some time..."
   end
-
-
-
   Asciidoctor.convert_file(
     doc.index,
     to_file: to_file,
@@ -1014,6 +1041,38 @@ def algolia_index_cmd build, apikey=nil, args
       return false
     else
       return "ALGOLIA_INDEX_NAME='#{build.search['index']}' ALGOLIA_API_KEY='#{apikey}' bundle exec jekyll algolia #{@search_index_dry} #{args} "
+    end
+  end
+end
+
+# ===
+# Execute
+# ===
+
+def execute_command cmd
+  stdout, stderr, status = Open3.capture3(cmd.command)
+  failed = true if status.to_s.include?("exit 1")
+  unless cmd.options
+    puts stdout
+    puts stderr if failed
+  else
+    if failed && cmd.options['error']
+      @logger.warn cmd.options['error']['message'] if cmd.options['error']['message']
+      if cmd.options['error']['response'] == "exit"
+        @logger.error "Command failure: #{stderr}"
+        raise "CommandExecutionException"
+      end
+    end
+    if cmd.options['outfile']
+      contents = stdout
+      if cmd.options['outfile']
+        contents = "#{cmd.options['outfile']['prepend']}\n#{stdout}" if cmd.options['outfile']['prepend']
+        contents = "#{stdout}/n#{cmd.options['outfile']['append']}" if cmd.options['outfile']['append']
+        generate_file(contents, cmd.options['outfile']['path'])
+      end
+      if cmd.options['stdout']
+        puts stdout
+      end
     end
   end
 end
@@ -1222,6 +1281,10 @@ command_parser = OptionParser.new do|opts|
 
   opts.on("--parse-config", "Preprocess the designated configuration file as a Liquid template. Superfluous when passing -v/--var arguments.") do
     @parseconfig = true
+  end
+
+  opts.on("--unsafe", "Enable shell command executions without interactive check.") do
+    @safemode = false
   end
 
   opts.on("-h", "--help", "Returns help.") do
