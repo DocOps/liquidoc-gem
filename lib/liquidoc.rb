@@ -105,7 +105,7 @@ def config_build config_file, config_vars={}, parse=false
         commands = commands + "> " + step['command'] + "\n"
       end
     end
-    if commands.length
+    unless commands.to_s.strip.empty?
       puts "\nWARNING: This routine will execute the following shell commands:\n\n#{commands}"
       ui = HighLine.new
       answer = ui.ask("\nDo you approve? (YES/no): ")
