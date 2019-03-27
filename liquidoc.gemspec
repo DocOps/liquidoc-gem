@@ -28,6 +28,19 @@ Gem::Specification.new do |spec|
   spec.executables   = ["liquidoc"]
   spec.require_paths = ["lib"]
 
+  spec.required_ruby_version     = ">= 2.3.0"
+  spec.required_rubygems_version = ">= 2.7.0"
+
   spec.add_development_dependency "bundler", "~> 1.15"
   spec.add_development_dependency "rake", "~> 10.0"
+
+  spec.add_runtime_dependency "asciidoctor", "~>1.5"
+  spec.add_runtime_dependency "json", "~>2.2"
+  spec.add_runtime_dependency "liquid", "~>4.0"
+  spec.add_runtime_dependency "asciidoctor-pdf", "~>1.5.0.alpha.16"
+  spec.add_runtime_dependency "logger", "~>1.3"
+  spec.add_runtime_dependency "crack", "~>0.4"
+  spec.add_runtime_dependency "jekyll", "~>3.0"
+  spec.add_runtime_dependency "jekyll-asciidoc", "~>2.1"
+  spec.add_runtime_dependency "highline", "~>2.0"
 end
