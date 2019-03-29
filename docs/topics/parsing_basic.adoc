@@ -1,0 +1,14 @@
+= Basic Parsing
+
+Give LiquiDoc (1) any proper YAML, JSON, XML, or CSV (with header row) data file and (2) a template mapping any of the data to token variables with Liquid markup -- LiquiDoc returns STDOUT feedback or writes a new file (or multiple files) based on that template.
+
+.Example -- Generate sample output from files passed as CLI arguments
+----
+bundle exec liquidoc -d _data/sample.yml -t _templates/liquid/sample.asciidoc -o _output/sample.adoc
+----
+
+This single-action invocation of LiquiDoc ingests data from YAML file `sample.yml`, reads __Liquid__-formatted template `sample.asciidoc`, and generates __AsciiDoc__-formatted file `sample.adoc`
+
+[TIP]
+Add `--verbose` to any `liquidoc` command to see the steps the utility is
+taking.

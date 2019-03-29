@@ -1,0 +1,16 @@
+= Deploy Actions
+
+Mainstream deployment platforms are better suited to tying all your operations together, but we plan to bake a few common operations in to help you get started.
+For true build-and-deployment control, consider build tools such as Make, Rake, and Gradle, or deployment tools like Travis CI, CircleCI, and Jenkins.
+
+== Jekyll Serve
+
+For testing purposes, however, spinning up a local webserver with the same stroke that you build a site is pretty rewarding and time saving, so we'll start there.
+
+For now, this functionality is limited to adding a `--deploy` flag to your `liquidoc` command.
+This will attempt to serve files from the `destination:` set for the associated Jekyll build.
+
+[WARNING]
+LiquiDoc-automated deployment of Jekyll sites is both limited and untested under nonstandard conditions.
+Non-local deployment should be handled by external
+continuous-integration/devlopment (CICD) tools.
