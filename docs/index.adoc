@@ -1,5 +1,9 @@
 = LiquiDoc Admin and User Manual
 :manual: true
+:stylesheet: golo.css
+:stylesdir: ./css
+:linkcss:
+:icons: font
 ifdef::pdf[]
 :toc: preamble
 endif::[]
@@ -52,6 +56,8 @@ include::topics/action_execute.adoc[]
 include::topics/action_execute.adoc[]
 
 include::topics/config_full.adoc[]
+
+include::topics/reference.adoc[]
 
 :leveloffset: -1
 
