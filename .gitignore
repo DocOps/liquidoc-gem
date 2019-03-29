@@ -1,3 +1,5 @@
 Gemfile.lock
 pkg
 *.gem
+docs/index.html
+docs/liquidoc-manual.html
