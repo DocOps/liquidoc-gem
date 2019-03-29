@@ -1,0 +1,44 @@
+= Basic Configuration
+
+The best way to use LiquiDoc is with a configuration file.
+This not only makes the command line much easier to manage (requiring just a configuration file path argument), it also adds the ability to perform more complex build routines and manage them with source control.
+
+Here is very simple build routine instructed by a LiquiDoc config:
+
+[source,yaml]
+.Example config file for recognized-format parsing
+----
+- action: parse # <1>
+  data: source_data_file.json # <2>
+  builds: # <3>
+    - template: liquid_template.html # <4>
+      output: _output/output_file.html # <5>
+    - template: liquid_template.markdown # <4>
+      output: _output/output_file.md # <5>
+----
+
+<1> The top-level `-` denotes a new, consecutively executed “step” in the build.
+The `action:` parameter determines what type of action this step will perform.
+The options are `parse`, `migrate`, `render`, `deploy`, and `execute`.
+
+<2> If the `data:` setting's value is a string, it must be the filename of a format automatically recognized by LiquiDoc: `.yml`, `.json`, `.xml`, or `.csv`.
+Otherwise, `data:` must contain subordinate settings for `file:` and `type:`.
+
+<3> The `builds:` section contains a list of procedures to perform on the data.
+It can include as many subroutines as you wish to perform.
+This one instructs two builds.
+
+<4> The `template:` setting should be a liquid-formatted file (see <<{xref_source-markup-liquid-basics}>>).
+
+<5> The `output:` setting is a path and filename where you wish the output to be saved.
+Can also be `stdout` to write to console.
+
+When you have established a configuration file, you can call it with the option `-c` on the command line.
+
+.Example -- Generate sample output from files established in a configuration
+----
+bundle exec liquidoc -c _configs/cfg-sample.yml --stdout
+----
+
+[TIP]
+Repeat without the `--stdout` flag, and you'll find the generated files in `_output/`, as defined in the configuration.

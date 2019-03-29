@@ -1,0 +1,129 @@
+= Templating with Liquid
+
+Shopify's open-source link:https://help.shopify.com/themes/liquid/basics[*Liquid*] templating language and engine are used for parsing complex variable data in plaintext markup, typically for generating iterated (looping) output.
+For instance, a data structure of glossary terms and definitions that needs to be looped over and pressed into a more publish-ready markup, such as Markdown, AsciiDoc, reStructuredText, LaTeX, or HTML.
+
+Any valid Liquid-formatted template is accepted, in the form of a text file with any extension.
+For data sourced in CSV format or extracted through regex source parsing, all data is passed to the Liquid template parser as an array called `data:`, containing one or more rows to be iterated through.
+Data sourced in YAML, XML, or JSON may be passed as complex structures with custom names determined in the file contents.
+
+Looping through known data formats is fairly straightforward.
+A _for_ loop iterates through your data, item by item.
+Each item or row contains one or more key-value pairs.
+
+[[rows_asciidoc]]
+.Example -- rows.asciidoc Liquid template for outputting AsciiDoc plaintext markup
+[source,liquid]
+----
+{% for row in data %}{{ row.name }}::
+{{ row.description }}
++
+[horizontal.simple]
+Required:: {% if row.required == "true" %}*Yes*{% else %}No{% endif %}
+{% endfor %}
+----
+
+In <<rows_asciidoc>>, we're instructing Liquid to iterate through our data items, generating a data structure called `row` each time.
+The double-curly-bracketed tags convey variables to evaluate.
+This means `{{ row.name }}` is intended to express the value of the `name` parameter in the item presently being parsed.
+The other curious marks such as `::` and `[horizontal.simple]` are AsciiDoc markup -- they are the formatting we are trying to introduce to give the content form and semantic relevance.
+
+.Non-printing Markup
+****
+In Liquid and most templating systems, any row containing a non-printing “tag” will leave a blank line in the output after parsing.
+One solution is to stack tags horizontally when you do not wish to generate a blank line, as with the first row above.
+However, a non-printing tag such as `{% endfor %}` will generate a blank line that can be inconvenient in the output.
+
+This side effect of templating is unfortunate, as it discourages elegant, “accordian-style” code nesting, like you see in the HTML example below (<<parsed_html>>).
+Unlike most templating formats, however, Liquid offers highly effective link:https://shopify.github.io/liquid/basics/whitespace/[whitespace control] capability.
+This additional markup is not always worth the time but can come in quite handy, especially when generating markup where indentation matters.
+In the end, ugly Liquid templates can generate quite elegant markup output with exquisite precision.
+****
+
+The above (<<rows_asciidoc>>) would generate the following:
+
+[[asciidoc_formatted_source]]
+.Example -- AsciiDoc-formatted output
+[source,asciidoc]
+----
+A_B::
+A thing that *SnASFHE&"\|+1Dsaghf
++
+[horizontal.simple]
+Required::: *Yes*
+
+G_H::
+Some text for &hdf'" 1t`F
++
+[horizontal.simple]
+Required::: No
+----
+
+The generically styled AsciiDoc rich text reflects the distinctive structure with (very little) more elegance.
+
+.AsciiDoc rich text (rendered)
+====
+A_B::
+A thing that *SnASFHE&"\|+1Dsaghf
++
+[horizontal.simple]
+Required::: *Yes*
+
+G_H::
+Some text for &hdf'" 1t`F
++
+[horizontal.simple]
+Required::: No
+====
+
+The implied structures are far more evident when displayed as HTML derived from Asciidoctor parsing of the LiquiDoc-generated AsciiDoc source (from <<asciidoc_formatted_source>>).
+
+[[parsed_html]]
+.AsciiDoc parsed into HTML
+[source,html]
+----
+<div class="dlist data-line-1">
+  <dl>
+    <dt class="hdlist1">A_B</dt>
+    <dd>
+      <p>A thing that *SnASFHE&amp;"\|+1Dsaghf</p>
+      <div class="hdlist data-line-5 simple">
+        <table>
+          <tr>
+            <td class="hdlist1">
+              Required
+            </td>
+            <td class="hdlist2">
+              <p><strong>Yes</strong></p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </dd>
+    <dt class="hdlist1">G_H</dt>
+    <dd>
+      <p>Some text for &amp;hdf'" 1t`F</p>
+      <div class="hdlist data-line-11 simple">
+        <table>
+          <tr>
+            <td class="hdlist1">
+              Required
+            </td>
+            <td class="hdlist2">
+              <p>No</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </dd>
+  </dl>
+</div>
+----
+
+Remember, all this started out as that little old free-form text file.
+
+.Example -- sample.free free-form data source file
+----
+A_B A thing that *SnASFHE&"\|+1Dsaghf true
+G_H Some text for &hdf 1t`F false
+----

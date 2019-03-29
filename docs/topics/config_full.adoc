@@ -1,0 +1,20 @@
+= Configuring a LiquiDoc Build
+
+Like any software or documentation build tool, routine configuration is key.
+Everything needs to be just so in a build.
+Order matters, and resources must be used wisely.
+
+Rather than discuss build strategies broadly here, I have opted to move all my recommendations to the LiquiDoc Content Management Framework.
+link:https://github.com/DocOps/liquidoc-cmf[LiquiDoc CMF's bootstrap repository] has more, but the link:https://www.ajyl.org/liquidoc-cmf-guides[LiquiDoc CMF Guides] are the real authority.
+For now, look there for LDCMF-specific as well as broader strategic build insights.
+
+[NOTE]
+This section is repeated from the introduction.
+
+include::./config_basic.adoc[leveloffset=+1]
+
+[[self-doc-config]]
+include::./config_logging.adoc[leveloffset=+1]
+
+[[dynamic-config]]
+include::./config_dynamic.adoc[leveloffset=+1]

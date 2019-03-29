@@ -1,0 +1,61 @@
+= Self-Documenting Configuration
+
+For non-geniuses like myself, it can be really helpful to have a plain-English accounting of what is happening during a build procedure.
+During builds, LiquiDoc creates a secondary log as it churns through a configuration.
+
+If you add no documentation fields to your build config's YAML file, this secondary logger will still generate a plain-language description of the steps it is taking.
+But each step can be enhanced with customized comments, as well, to pass along the reasoning behind any step.
+
+By default these are written “config explainers” to a file stored under your build directory (`_build/pre/config-explainer.adoc` unless otherwise established).
+Alternatively, the log will print to screen (console) during a configured LiquiDoc build procedure.
+Simply add the `--explicit` flag to your command.
+
+.Example
+[source,bash]
+----
+bundle exec liquidoc -c _configs/build-docs.yml --explicit
+----
+
+This feature will explain which sources are used to produce what output, but it won't say why.
+LiquiDoc administrators can state the purpose of each action step and each build sub-step.
+There are two ways to intervene with the automated log message.
+
+message::
+Add a custom `message:` key.
+The contents of this parameter will appear _instead of_ the automated message.
+
+reason::
+The reason will be integrated with the automated message (it's moot with a custom message as described above).
+Usually it will be appended as a comma-demarcated phrase at the end of the automated statement or in a sensible place in the middle, depending on the structure of the automated message.
+
+.Example from LDCMF Guides `_configs/build-docs.yml`
+[source,yaml]
+----
+- action: migrate
+  source: theme/
+  target: _build/
+  reason: so `theme/` dir will be subordinate to the SSG source path
+- action: parse
+  data: data/product.yml
+  message: . Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
+  builds:
+    - template: _templates/liquid/index-by-user-stories.asciidoc
+      output: _build/_built_index-stories.adoc
+      message: |
+        .. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
+----
+
+[TIP]
+In custom `message:` fields, adding AsciiDoc ordered-list markup maintains the ordered lists this feature generates by for automated steps (the ones where you don't explicitly declare a `message:`).
+You may also use bullets (`*`), add styling directives or other markers, etc.
+
+.Post-render output
+====
+. Copies `theme/` to `_build/`, so theme/ dir will be subordinate to the SSG source path.
+. Performs the first round of product-data parsing to build two structurally vital files, sourcing data in `data/product.yml`.
+.. Builds the stories index file used to give order to the PDF index file's inclusion of topic files (`_build/includes/_built_page-meta.adoc`)
+====
+
+This config explainer feature is mainly intended to feed into documentation _about_ your primary docs build.
+The AsciiDoc-formatted explainers can be included anywhere in a document about
+your docs infrastructure.

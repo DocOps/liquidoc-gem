@@ -1,0 +1,174 @@
+= Dynamic LiquiDoc Build Configurations
+
+As long as we are invoking Liquid to manipulate files with templates in our parse operations, we had might as well use it to parse our config files themselves.
+This is an _advanced procedure_ for injecting programmatic functionality into your builds.
+If you are comfortable with Liquid templating and basic LiquiDoc build config structure, you are ready to learn dynamic configuration.
+
+As of LiquiDoc 0.9.0, config files can be parsed (preprocessed) at the top of a build.
+That is, your config files can contain variables, conditionals, and iterative loops -- any Liquid tags and filters supported by LiquiDoc.
+
+All you have to do is (1) add Liquid tags to your YAML configuration file.
+If the Liquid markup in your config file expects variables, pass those variables on the `liquidoc` CLI using `--var key=value`.
+
+[[config-variables]]
+== Using Config Variables
+
+Dynamic configurations typically expect variables to be passed in, either to _directly populate values_ in the config file or to _differentially trigger conditional tags_ in the config file.
+
+Let's first take a look at a sample dynamic configuration to see if we can understand what it is trying to do.
+
+.Example `build-config.yml` dynamic LiquiDoc configuration for alternate builds
+[source,yaml]
+----
+- action: parse
+  data: data/products.yml:{{ vars.product_slug }}
+  builds:
+    - template: product-datasheet.asciidoc
+      output: product-datasheet_{{ vars.product_slug }}.adoc
+----
+
+This config file wants to build a product datasheet for a specific product, which it expects to be indicated by a config variable called `product_slug`.
+
+Config variables are passed using the `--var varname='var val'` format, where `varname` is any key that exists as a Liquid variable in your config file, and `'var val'` is its value, wrapped in single quotes.
+Let's say in this case, we want to generate the datasheet for the Windows Enterprise edition of our product.
+
+[source,shell]
+----
+bundle exec liquidoc -c _configs/build-config.yml -v product_slug=win-ent
+----
+
+[NOTE]
+The `-v` option is an alias for `--var`.
+
+This will cause our dynamic configuration to look for a data block formatted like so: `data/products.yml:win-ent`.
+So long as our `products.yml` file contains a top-level data structure called `win-ent`, we're off to the races.
+
+== Eliminating Config Variables
+
+Equally as cool as enabling custom builds by accepting what amount to _environment variables_, we can also handle big, repetitive builds with Liquid looping.
+Let's try that file again with some powerful tweaks.
+
+.Example `build-config.yml` dynamic LiquiDoc configuration for iterative builds
+[source,yaml]
+----
+{% assign products = "win-exp,win-ent,mac-exp,mac-ent,ubu-exp,ubu-ent" %}
+{% for slug in products %}
+- action: parse
+  data: data/products.yml:{{ slug }}
+  builds:
+    - template: product-datasheet.asciidoc
+      output: product-datasheet_{{ slug }}.adoc
+{% endfor %}
+----
+
+Now we are building six data sheets using eight lines of code.
+And notice what is missing: no more +++vars.+++-scoped variables, just local ones.
+
+Dynamic configurations are limited only by your imagination.
+
+== Using Environment Variables with Dynamic Configuration
+
+[source,yaml]
+.Example config -- Passing environment variable to a parse action dynamically
+----
+- action: parse
+  data: schema.yml
+  builds:
+    - name: parse-basic-nav
+      template: _templates/side-nav.html
+      output: _output/side-nav-basic.html
+      variables:
+        product:
+          edition: {{ vars.edition }}
+        environment: {{ vars.env }}
+----
+
+With a configuration like this, our `side-nav.html` template can further process variables, such as `base_url` in the example snippet below.
+
+[source,html]
+.Example Liquid template (`side-nav.html`) with variables passed
+----
+{% if vars.environment == "staging" %}
+{% assign base_url = "http://staging.int.example.com" %}
+{% elsif vars.environment == "production" %}
+{% assign base_url = "http://example.com" %}
+{% endif %}
+LiquiDoc {{ vars.product.edition }}
+<ul class="nav">
+{% for page in site.data.pages %}
+<li><a href="{{ site.base_url }}/{{ page.path }}">{{ page.name }}</a>
+{% endfor %}
+</ul>
+----
+
+To set the values of `vars.edition` and `vars.environment` in the config file, add for instance `--var edition=basic --var environment=staging`
+
+== Constraining Build Options with Dynamic Configuration
+
+Another way to use dynamic configuration is to conditionalize steps in the build.
+Recipe-based configuration will eventually be added to LiquiDoc, but for now you can toggle parts of your build on and off using conditionals governed by environment variables.
+For instance,
+
+.Example `build-config.yml` with conditionalized steps
+[source,yaml]
+----
+{% assign build_pdf = true %}
+{% assign build_html = true %}
+{% case recipe %}
+{% when 'pdfonly' %}
+  {% assign build_html = false %}
+{% when 'nopdf' %}
+  {% assign build_pdf = false %}
+{% endcase %}
+- action: render
+  data: _configs/asciidoctor.yml
+  source: content/product-datasheet.adoc
+  builds:
+    {% if build_html %}
+    - backend: html5
+      output: product-datasheet.html
+    {% endif %}
+    {% if build_pdf %}
+    - backend: pdf
+      output: product-datasheet.pdf
+    {% endif %}
+----
+
+With a build config like this, optionally invoking `--var recipe=nopdf`, for instance, will suppress the PDF substep during the build routine.
+
+== Liquid Loops in Configs
+
+Aside from implementing conditional elements in your configs, dynamism also introduces looping.
+Repetitive procedures that take up lots of vertical space to repeat sequentially with largely the same specifics can be difficult to manage.
+If you're building lots of parallel documents from the same source with minimal differences in each configuration action or build step, you may find yourself wishing you could write once and execute five times.
+
+With Liquid's _for_ loops, you can do just that.
+Review this code and imagine how much vertical space is saved.
+
+.Example space-saving 'for' loop in Liquid
+[source,yaml]
+----
+{% assign products = "one,two,three,four,five" | split: "," %}
+{% assign langs = "en,es" %}
+- stage: parse-strings
+  action: parse
+  data: data/strings.yml
+  builds:
+{% for prod in portals %}
+  {% for lang in langs %}
+    - output: strings-{{prod}}-{{lang}}.yml
+      template: string-processing.yaml
+      variables:
+        portal: {{prod}}
+        lang: {{lang}}
+  {% endfor %}
+{% endfor %}
+----
+
+This code saves the space and maintenance of five `output:` blocks.
+
+[TIP]
+In Liquid, loops can only iterate through arrays.
+Comma-delimited lists can be converted to arrays using the *split* filter to divide its contents into items.
+The `| split: ","` notation here tells Liquid we wish to apply this filter so
+the variable `portals` can become an array.
