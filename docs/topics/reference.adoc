@@ -1,0 +1,130 @@
+= Reference
+
+[[liquid-tags-supported]]
+== Supported Liquid Tags and Filters
+
+LiquiDoc supports all link:https://shopify.github.io/liquid/[standard Liquid tags and filters], as well as all of link:https://jekyllrb.com/docs/templates/#filters[Jekyll's custom Liquid filters].
+Support for link:https://github.com/DocOps/liquidoc-gem/issues/47[Jekyll's include tag] should be coming soon.
+
+[[config-settings-matrix]]
+== Config Parameters Matrix
+
+Here is a table of established configuration settings, as they pertain to each key LiquiDoc action.
+
+// tag::options-table[]
+[cols="3,1,1,1,1",options="header"]
+|===
+| Parameter
+| Parse
+| Migrate
+| Render
+| Execute
+
+5+s| Main Per-stage Settings
+
+s| action
+| Required
+| Required
+| Required
+| Required
+
+s| data
+| Optional
+| N/A
+| Optional
+| N/A
+
+s| source
+| N/A
+| Required
+| Required
+| N/A
+
+s| target
+| N/A
+| Required
+| N/A
+| N/A
+
+s| command
+| N/A
+| N/A
+| N/A
+| Required
+
+s| options
+| N/A
+| Optional
+| Optional
+| Optional
+
+s| stage
+| Optional
+| Optional
+| Optional
+| Optional
+
+s| builds
+| Required
+| N/A
+| Required
+| N/A
+
+5+s| Per-Build Settings
+
+s| output
+| Required
+| N/A
+| Optional*
+| N/A
+
+s| backend
+| N/A
+| N/A
+| Optional
+| N/A
+
+s| config
+| N/A
+| N/A
+| Optional
+| N/A
+
+s| template
+| Optional
+| N/A
+| N/A
+| N/A
+
+s| style
+| N/A
+| N/A
+| Optional
+| N/A
+
+s| attributes
+| N/A
+| N/A
+| Optional
+| N/A
+
+s| variables
+| Optional
+| N/A
+| N/A
+| N/A
+
+s| properties
+| N/A
+| N/A
+| Optional
+| N/A
+s| search
+| N/A
+| N/A
+| Optional
+| N/A
+|===
+
+pass:[*]The `output` setting is considered optional for render operations
+because static site generations target a directory set in the SSG's config file.

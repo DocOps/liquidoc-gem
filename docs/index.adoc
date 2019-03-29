@@ -1,0 +1,62 @@
+= LiquiDoc Admin and User Manual
+:manual: true
+ifdef::pdf[]
+:toc: preamble
+endif::[]
+ifndef::pdf[]
+:toc: left
+endif::[]
+include::../README.adoc[tags="settings"]
+
+include::../README.adoc[tags="overview"]
+
+.A Note on Styles, Conventions, and Frameworks
+****
+This guide consists of “generic” LiquiDoc resources and instructions.
+It presents a relatively “unopinionated”, or even inconsistently opinionated, application style.
+
+As with any complex tool, conventions for file structures, namespaces, and orders of operation are highly recommended.
+Because LiquiDoc is designed to adapt to existing AsciiDoc codebases, it is also highly configurable to match various environments.
+Its main upstream dependencies -- Jekyll and Asciidoctor -- are similarly “configuration agnostic”.
+
+You may *develop your own* conventions or *adopt/modify an approach* such as LiquiDoc Content Management Framework (link:{ldcmf_url}[source] | link:{ldcmf_guides}[docs]) -- whichever you find more helpful.
+
+In any case, the breadth of configuration and namespace options for LiquiDoc command-line arguments and configuration formatting is relatively well represented in this manual.
+****
+
+== Purpose and Uses
+
+include::../README.adoc[tags="purpose"]
+
+[[installation]]
+include::../README.adoc[tags="installation"]
+
+:leveloffset: +1
+
+include::topics/intro.adoc[]
+
+include::topics/parsing_basic.adoc[]
+
+include::topics/config_basic.adoc[]
+
+include::topics/action_parse.adoc[]
+
+include::topics/action_migrate.adoc[]
+
+include::topics/action_render.adoc[]
+
+include::topics/action_deploy.adoc[]
+
+include::topics/action_execute.adoc[]
+
+include::topics/action_execute.adoc[]
+
+include::topics/config_full.adoc[]
+
+:leveloffset: -1
+
+== License
+
+----
+include::../LICENSE[]
+----

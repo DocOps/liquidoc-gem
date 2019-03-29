@@ -1,0 +1,85 @@
+= Execute Actions
+
+LiquiDoc lets you invoke shell commands from within a build routine.
+A basic `execute` action requires just two parameters: `action: execute` and `command: <shell command>`.
+
+[IMPORTANT]
+Because shell commands can be dangerous, LiquiDoc will warn you if your config contains any, listing them and prompting you to approve.
+To override this, add `--unsafe` to your `liquidoc` command.
+
+The `command:` value is a string identical to any 1-line shell command, which will be performed in the system's current shell environment (probably Bash).
+
+[source,yaml]
+----
+- action: execute
+  command: git checkout release/docs/3.1.x
+----
+
+An execute action with no options listed will be performed, with results printed to console, if applicable.
+The above command would generate Git feedback, whereas a successful `rm somefile.txt` command would not.
+Failed commands will not cause the LiquiDoc routine to halt; LD will simply move on to the next stage.
+
+To suppress output, add `stdout: false` to `options:`.
+
+[source,yaml]
+----
+- action: execute
+  command: git checkout release/docs/3.1.x
+  options:
+    stdout: false
+----
+
+== Output to File
+
+To capture the output of a given command, add `options:` to the `execute` instructions.
+Writing results to a file is enabled with the `outfile:` option.
+
+[source,yaml]
+----
+- action: execute
+  command: ls -l imports/product3/
+  options:
+    stdout: true
+    outfile:
+      path: _build/pre/products3_dirlist.stdout
+      prepend: "perms\tqty\tuser\tgroup\tsize\tmonth\tday\ttime\tpath"
+      append: EOF
+----
+
+When writing results to an outfile, optionally insert text at the top or bottom of your new file using `prepend:` and `append:` settings.
+
+.products3_dirlist.stdout--Sample output from the above command
+[source,plaintext]
+----
+perms	qty	user	group	size	month	day	time	path
+total 96
+-rw-r--r--  1 brian  antifa  30314 Jan  8 13:16 install.adoc
+-rw-r--r--  1 brian  antifa   1833 Jan  8 13:16 intro.adoc
+-rw-r--r--  1 brian  antifa     52 Jan  8 13:16 overview.adoc
+-rw-r--r--  1 brian  antifa   5125 Jan  8 13:16 resources.adoc
+EOF
+----
+
+[NOTE]
+When the `outfile:` option is in use, the option `stdout` defaults to `false`.
+Set it to true to capture output in a file _and_ print it to screen.
+
+== Error Handling
+
+The status of each command is tracked, and errors that result in an exit status of `1` can optionally halt the entire LiquiDoc routine.
+To cause this, you must add an `error:` block to the options, with a child parameter: `response: exit`, as shown above.
+The default behavior is to continue processing (`response: ignore`).
+
+[source,yaml]
+----
+- action: execute
+  command: git checkout release/docs/3.1.x
+  options:
+    error:
+      response: exit
+      message: Failed to checkout branch; Make sure local head is clean!
+----
+
+You may optionally provide a second child, `message:` followed by the string users will see when they encounter an error here.
+If the command throws an error, this message will appear, even if you choose not
+to exit processing.

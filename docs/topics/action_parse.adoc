@@ -1,0 +1,235 @@
+= Parse Actions
+
+The primary type of action performed by LiquiDoc during a build step is parsing semi-structured data into any flat format desired.
+
+== Data Sources
+
+Valid data sources come in a few different types.
+There are the built-in data types (YAML, JSON, XML, CSV) vs free-form type (files processed using regular expressions, designated by the `regex` data type).
+There is also a divide between simple one-record-per-line data types (CSV and regex), which produce one set of parameters for every line in the source file, versus nested data types that can reflect far more complex structures.
+
+=== Native Nested Data (YAML, JSON, XML)
+
+The native nested formats are actually the most straightforward.
+So long as your filename has a conventional extension, you can just pass a file path for this setting.
+That is, if your file ends in `.yml`, `.json`, or `.xml`, and your data is properly formatted, LiquiDoc will parse it appropriately.
+
+For standard-format files that have non-standard file extensions (for example, `.js` rather than `.json` for a JSON-formatted file), you must declare a type explicitly.
+
+[source,yaml]
+.Example config -- Instructing correct type for mislabeled JSON file
+----
+- action: parse
+  data:
+    file: _data/source_data_file.js
+    type: json
+  builds:
+    - template: _templates/liquid_template.html
+      output: _output/output_file.html
+----
+
+Once LiquiDoc knows the right file type, it will parse the file into a Ruby object for further processing.
+
+=== CSV Data
+
+Data ingested from CSV files will use the first row as key names for columnar data in the subsequent rows, as shown below.
+
+.Example -- sample.csv showing header/key and value rows
+[source,csv]
+----
+name,description,default,required
+enabled,Whether project is active,,true
+timeout,The duration of a session (in seconds),300,false
+----
+
+The above source data, parsed as a CSV file, will yield an _array_ of hashes.
+Each array item is a _structure_ -- what Ruby calls a _hash_ -- representing a row from the source file (except the first row, which establishes parameter keys).
+As represented in the CSV example above, if the structure contains more than one key-value pair (more than one “column” in the source), all such pairs will be siblings, not nested or hierarchical.
+
+.Example -- array derived from sample.csv, with values depicted
+[source,ruby]
+----
+data[0].name #=> enabled
+data[0].description #=> Whether project is active
+data[0].default #=> nil
+data[0].required #=> true
+data[1].name #=> timeout
+data[1].description #=> The duration of a session (in seconds)
+data[1].default #=> 300
+data[1].required #=> false
+----
+
+=== Unstructured Data
+
+Unstructured data files can be ingested as well, as long as records are delineated by lines (as with CSV) _and_ each line meets a consistent pattern we can “scrape” for data to organize.
+This method generates arrays of structures similarly to the CSV approach.
+
+Unstructured records are parsed into using regular expression (“regex”) patterns.
+Any file organized with one record per line may be consumed and parsed by LiquiDoc, provided you tell the parser which variables to extract from where.
+The parser will read each line individually, applying your regex pattern to extract data using named groups then storing them as variables for the associated parsing action.
+
+[TIP]
+.Learn regular expressions
+If you deal with docs but are not a regex user, become one.
+They are increedibly powerful and can save hours of error-prone manual work such as complex find and replace.
+
+.Example -- sample.free free-form data source file
+----
+A_B A thing that *SnASFHE&"\|+1Dsaghf true
+G_H Some text for &hdf 1t`F false
+----
+
+[source,yaml]
+.Example config -- Instructing correct type for mislabeled JSON file
+----
+- action: parse
+  data:
+    file: _data/sample.free
+    type: regex
+    pattern: ^(?<code>[A-Z_]+)\s(?<description>.*)\s(?<required>true|false)\n
+  builds:
+    - template: _templates/liquid_template.html
+      output: _output/output_file.html
+----
+
+Let's take a closer look at that regex pattern.
+
+.Example -- regular expression with named groups for variable generation
+[source,regex]
+----
+^(?<code>[A-Z_]+)\s(?<description>.*)\s(?<required>true|false)\n
+----
+
+We see the named groups `code`, `description`, and `required`.
+This maps nicely to a new array.
+
+.Example -- array derived from sample.free using above regex pattern
+[source,ruby]
+----
+data[0].code #=> A_B
+data[0].description #=> A thing that *SnASFHE&"\|+1Dsaghf
+data[0].required #=> true
+data[1].code #=> G_H
+data[1].description #=> Some text for &hdf'" 1t`F
+data[1].required #=> false
+----
+
+Free-form/regex parsing is obviously more complicated than the other data types.
+Its use case is usually when you simply cannot control the form your source takes.
+
+The regex type is also handy when the content of some fields would be burdensome to store in conventional semi-structured formats like those natively parsed by LiquiDoc.
+This is the case for jumbled content containing characters that require escaping, so you can store source matter like that from the example above in the rawest possible form.
+
+.Advanced Data Ingest
+****
+[source,yaml]
+.Example config file for unrecognized format parsing
+----
+- action: parse
+  data: # <1>
+    file: source_data_file.txt # <2>
+    type: regex # <3>
+    pattern: (?<kee>[A-Z0-9_]+)\s(?<valu>.*)\n # <4>
+  builds:
+    - template: liquid_template.html
+      output: _output/output_file.html
+    - template: liquid_template.markdown
+      output: _output/output_file.md
+  stage: parse-my-file # <5>
+----
+
+<1> In this format, the `data:` setting contains several other settings.
+
+<2> The `file:` setting accepts _any_ text file, no matter the file extension or data formatting within the file.
+This field is required.
+
+<3> The `type:` field can be set to `regex` if you will be using a regular expression pattern to extract data from lines in the file.
+It can also be set to `yml`, `json`, `xml`, or `csv` if your file is in one of these formats but uses a nonstandard extension.
+
+<4> If your type is `regex`, you must supply a regular expression pattern.
+This pattern will be applied to each line of the file, scanning for matches to turn into key-value pairs.
+Your pattern must contain at least one group, denoted with unescaped `(` and `)` markers designating a “named group”, denoted with `?<string>`, where `string` is the name for the variable to assign to any content matching the pattern contained in the rest of the group (everything else between the unescaped parentheses.).
+
+<5> _Optionally_, you can tag any top-level step with a label.
+This will be expressed during logging, and eventually it will enable us to suppress or reorder steps by name (see link:https://github.com/DocOps/liquidoc-gem/issues/33[Issue #33]).
+****
+
+== Default Output Formats
+
+LiquiDoc can directly convert any supported semi-structured data input format to either YAML or JSON output.
+Simply provide no template parameter, and make sure the output file has a proper extension (`.yml` or `.json`).
+
+.Example config snippet for data-to-data conversion
+[source,yaml]
+----
+- action: parse
+  data: _data/testdata.xml
+  output: _build/frontend/testdata.json
+----
+
+[NOTE]
+This feature is in need of validation.
+XML and CSV output will be added in a future release if direct conversions prove
+useful.
+
+ifdef::manual[]
+[[liquid-templating]]
+include::./liquid_templating.adoc[]
+endif::[]
+ifndef::manual[]
+[NOTE]
+For more on Liquid templating, see <<liquid-templating,Templating with Liquid>>.
+endif::[]
+
+== Passing Additional Variables
+
+In addition to data files, parse operations accept fixed variables and environment variables.
+
+*Fixed variables* are defined using a _per-build_ structure called `variables:` in the config file.
+Each build operation can accept a distinct set of variables.
+
+[source,yaml]
+.Example config -- Passing additional variables into a parse action
+----
+- action: parse
+  data: schema.yml
+  builds:
+    - name: parse-basic-nav
+      template: _templates/side-nav.html
+      output: _output/side-nav-basic.html
+      variables:
+        product:
+          edition: basic
+    - name: parse-premium-nav
+      template: _templates/side-nav.html
+      output: _output/side-nav-prem.html
+      variables:
+        product:
+          edition: premium
+----
+
+This configuration will use the same data and templates to generate two distinct output files.
+Each build uses an identical Liquid template (`side-nav.html`) to parse its distinct `side-nav-<edition>.html` file.
+Inside that template, we might find a block of Liquid code hiding some navigation items from the basic edition, and vice versa.
+
+.Example Liquid conditionals
+[source,html]
+----
+<li><a href="home">Home</a></li>
+<li><a href="dash">Dashboard</a></li>
+{% if vars.product.edition == "basic" %}
+<li><a href="upgrade">Upgrade!</a></li>
+{% elsif vars.product.edition == "premium" %}
+<li><a href="billing">Billing</a></li>
+{% endif %}
+----
+
+This portion of the example config presses two versions of the Liquid template `side-nav.html` into two different nav menus, either to be served on two parallel sites or one site with the ability to select front-end elements depending on user status.
+In this example, only the menu shown to premium users will contain the billing link; basic users will see an upgrade prompt.
+
+== Output
+
+After this parsing, files are written in any of the given output formats, or else just written to console as STDOUT (when you add the `--stdout` flag to your command or set `output: stdout` in your config file).
+Liquid templates can be used to produce any plaintext format imaginable.
+Just format valid syntax with your source data and Liquid template, then save
+with the proper extension, and you're all set.
