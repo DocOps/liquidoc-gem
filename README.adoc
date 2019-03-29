@@ -20,6 +20,16 @@
 :show_admin: true
 :toc: macro
 :toclevels: 3
+ifndef::env-github[:icons: font]
+ifdef::env-github[]
+:status:
+:outfilesuffix: .adoc
+:caution-caption: :fire:
+:important-caption: :exclamation:
+:note-caption: :paperclip:
+:tip-caption: :bulb:
+:warning-caption: :warning:
+endif::[]
 
 // tag::overview[]
 LiquiDoc is a documentation build utility for true single-sourcing of technical content and data.
