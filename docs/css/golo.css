@@ -731,3 +731,10 @@ pre.pygments.highlight { background-color: rgba(16, 195, 196, 0.05); }
 .pygments .tok-err { border: none !important; color: #800000 !important; }
 
 .pygments .tok-c { color: #999 !important; }
+
+/* CUSTOM STYLES */
+
+.literalblock pre, .listingblock > .content > pre {
+    overflow: scroll;
+    white-space: pre;
+}
