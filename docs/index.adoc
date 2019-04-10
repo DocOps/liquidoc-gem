@@ -1,8 +1,6 @@
 = LiquiDoc Admin and User Manual
-:manual: true
+:stylesdir: css/
 :stylesheet: golo.css
-:stylesdir: ./css
-:linkcss:
 :icons: font
 ifdef::pdf[]
 :toc: preamble
@@ -10,6 +8,7 @@ endif::[]
 ifndef::pdf[]
 :toc: left
 endif::[]
+:manual: true
 include::../README.adoc[tags="settings"]
 
 include::../README.adoc[tags="overview"]

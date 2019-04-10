@@ -15,6 +15,7 @@
 :xref_build-config-file-local: self-doc-config
 :ldcmf_url: https://github.com/DocOps/liquidoc-cmf
 :ajyl_url: https://www.ajyl.org
+:liquidoc_manual_url: {ajyl_url}/liquidoc/manual
 :ldcmf-guides_url: {ajyl_url}/liquidoc-cmf-guides
 // end::settings[]
 :show_admin: true
@@ -126,19 +127,33 @@ LiquiDoc should now be ready to run with Bundler support, which is the strongly 
 
 == Documentation
 
-Complete documentation can be built by LiquiDoc itself.
+Complete documentation appears at {liquidoc_manual_url}.
+It can be built locally using LiquiDoc itself.
 
-For a single-page HTML edition:
+. Get the source.
++
+[source,shell]
 ----
+git clone git@github.com:DocOps/liquidoc-gem.git
+cd liquidoc-gem
 bundle install
-bundle exec asciidoctor docs/index.adoc -o liquidoc.html
-open liquidoc.html
 ----
 
-If you prefer a PDF edition, use:
+. Build the docs.
+
+.. For a single-page HTML edition:
++
+[source,shell]
 ----
-bundle exec asciidoctor -r pdf docs/index.adoc -o liquidoc.pdf
-open liquidoc.pdf
+bundle exec asciidoctor docs/index.adoc -o docs/liquidoc-manual.html
+----
+
+.. If you prefer a PDF edition, use:
++
+[source,shell]
+----
+bundle exec asciidoctor -r pdf docs/index.adoc -o docs/liquidoc-manual.pdf
+open docs/liquidoc-manual.pdf
 ----
 
 == Usage

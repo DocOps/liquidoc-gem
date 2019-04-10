@@ -189,7 +189,7 @@ useful.
 
 ifdef::manual[]
 [[liquid-templating]]
-include::./liquid_templating.adoc[]
+include::./templating_liquid.adoc[]
 endif::[]
 ifndef::manual[]
 [NOTE]
