@@ -735,6 +735,11 @@ pre.pygments.highlight { background-color: rgba(16, 195, 196, 0.05); }
 /* CUSTOM STYLES */
 
 .literalblock pre, .listingblock > .content > pre {
-    overflow: scroll;
+    overflow-x: scroll;
     white-space: pre;
+}
+
+.literalblock.prewrap pre, .listingblock.prewrap > .content > pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
 }
