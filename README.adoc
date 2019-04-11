@@ -37,6 +37,12 @@ LiquiDoc is a documentation build utility for true single-sourcing of technical 
 It is especially suited for documentation projects with various required output formats from complex, single-sourced codebases, but it is intended for any project with complex, versioned input data for use in docs, user interfaces, and even back-end code.
 The highly configurable command-line utility (and Ruby gem) engages template engines to parse complex data into rich text output, from *blogs* to *books* to *knowledge bases* to *slide presentations*.
 
+ifndef::env-github[]
+[NOTE]
+LiquiDoc's prime source is on link:https://github.com/DocOps/liquidoc-cmf[icon:github[] Github]. +
+Use the Issues feature for support requests, or find us on link:https://gitter.im/liquidoc-cmf/Lobby[LiquiDoc icon:gitter[] Gitter] or link:https://www.writethedocs.org/slack/[Write the Docs AsciiDoc channel] on icon:slack[] Slack.
+endif::[]
+
 Content source is formatted in the incredible *AsciiDoc lightweight markup* language.
 Data sources can be flat files in formats such as *XML* (eXtensible Markup Language), *JSON* (JavaScript Object Notation), *CSV* (comma-separated values), and our preferred human-editable format: *YAML* (acronym link:https://en.wikipedia.org/wiki/YAML#History_and_name[in dispute]).
 LiquiDoc also accepts *regular expressions* to parse unconventionally formatted files.
@@ -155,6 +161,8 @@ bundle exec asciidoctor docs/index.adoc -o docs/liquidoc-manual.html
 bundle exec asciidoctor -r pdf docs/index.adoc -o docs/liquidoc-manual.pdf
 open docs/liquidoc-manual.pdf
 ----
+
+. Open the new file in your preferred browser or PDF reader
 
 == Usage
 
