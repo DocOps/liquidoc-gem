@@ -41,6 +41,11 @@ ifndef::env-github[]
 [NOTE]
 LiquiDoc's prime source is on link:https://github.com/DocOps/liquidoc-cmf[icon:github[] Github]. +
 Use the Issues feature for support requests, or find us on link:https://gitter.im/liquidoc-cmf/Lobby[LiquiDoc icon:gitter[] Gitter] or link:https://www.writethedocs.org/slack/[Write the Docs AsciiDoc channel] on icon:slack[] Slack.
+
+ifdef::liquidoc_version[]
+[NOTE]
+This manual covers LiquiDoc version `{liquidoc_version}`
+endif::[]
 endif::[]
 
 Content source is formatted in the incredible *AsciiDoc lightweight markup* language.
