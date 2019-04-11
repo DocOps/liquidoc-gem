@@ -3,3 +3,4 @@ pkg
 *.gem
 *.html
 *.pdf
+.DS_Store
