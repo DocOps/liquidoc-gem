@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FDocOps%2Fliquidoc-gem.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FDocOps%2Fliquidoc-gem?ref=badge_shield)
+
 // This AsciiDoc file must be rendered to be properly viewed.
 // The easiest way to view it rendered is on BitBucket
 // OR copy and paste these contents into
@@ -240,3 +242,7 @@ I'm also seeking opportunities to innovate management of documentation and prese
 Check out link:https://codewriting.org[codewriting.org] for more info.
 
 // end::consulting[]
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FDocOps%2Fliquidoc-gem.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FDocOps%2Fliquidoc-gem?ref=badge_large)
