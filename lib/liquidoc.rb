@@ -9,9 +9,13 @@ require 'logger'
 require 'csv'
 require 'crack/xml'
 require 'fileutils'
-require 'jekyll'
 require 'open3'
 require 'highline'
+require 'liquid/tags/jekyll'
+require 'liquid/filters/jekyll'
+require 'word_wrap'
+require 'word_wrap/core_ext'
+require 'sterile'
 
 # ===
 # Table of Contents
@@ -25,7 +29,8 @@ require 'highline'
 # 5a. parse procs def
 # 5b. migrate procs def
 # 5c. render procs def
-# 6. text manipulation modules/classes def
+# 5d. execute procs def
+# 6. text manipulation filters
 # 7. command/option parser def
 # 8. executive proc calls
 
@@ -39,6 +44,8 @@ require 'highline'
 @build_dir = @build_dir_def
 @configs_dir = @base_dir + '_configs'
 @templates_dir = @base_dir + '_templates/'
+@includes_dirs_def = ['_templates']
+@includes_dirs = @includes_dirs_def
 @data_dir = @base_dir + '_data/'
 @data_file = nil
 @attributes_file_def = '_data/asciidoctor.yml'
@@ -76,20 +83,24 @@ FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
 
 # Establish source, template, index, etc details for build jobs from a config file
 def config_build config_file, config_vars={}, parse=false
+
   @logger.debug "Using config file #{config_file}."
-  validate_file_input(config_file, "config")
-  if config_vars.length > 0 or parse or contains_liquid(config_file)
+  config = File.read(config_file)
+  if (config_vars.length > 0 or parse or config.contains_liquid?)
     @logger.debug "Config_vars: #{config_vars.length}"
   # If config variables are passed on the CLI, we want to parse the config file
   # and use the parsed version for the rest fo this routine
     config_out = "#{@build_dir}/pre/#{File.basename(config_file)}"
     vars = DataObj.new()
-    vars.add_data!("vars", config_vars)
+    vars.add_data!(config_vars, "vars")
+    config_dir = File.dirname(config_file)
+    includes_dirs = config_dir.force_array
+    vars.add_data!(@includes_dirs, :includes_dirs)
     liquify(vars, config_file, config_out)
     config_file = config_out
     @logger.debug "Config parsed! Using #{config_out} for build."
-    validate_file_input(config_file, "config")
   end
+  validate_file_input(config_file, "config")
   begin
     config = YAML.load_file(config_file)
   rescue Exception => ex
@@ -100,6 +111,8 @@ def config_build config_file, config_vars={}, parse=false
     end
     raise "ConfigFileError"
   end
+  # TESTS
+  puts config[0].argify
   cfg = BuildConfig.new(config) # convert the config file to a new object called 'cfg'
   if @safemode
     commands = ""
@@ -140,9 +153,9 @@ def iterate_build cfg
           end
           begin # Create build.data
             if data_files.sources.size == 1
-              data_obj.add_data!("", data) if data.is_a? Hash
+              data_obj.add_data!(data) if data.is_a? Hash
               # Insert arrays into the data. scope, and for backward compatibility, hashes as well
-              data_obj.add_data!("data", data)
+              data_obj.add_data!(data, "data")
             else
               data_obj.add_data!(src.name, data) # Insert object under self-named scope
             end
@@ -155,17 +168,20 @@ def iterate_build cfg
       builds.each do |bld|
         build = Build.new(bld, type, data_obj) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
-          # Prep & perform a Liquid-parsed build build
+          # Prep & perform a Liquid-parsed build
           @explainer.info build.message
-          build.add_data!("vars", build.variables) if build.variables
+          build.add_data!(build.variables, "vars") if build.variables
+          includes_dirs = @includes_dirs
+          includes_dirs = build.includes_dirs if build.includes_dirs
+          build.add_data!({:includes_dirs=>includes_dirs})
           liquify(build.data, build.template, build.output) # perform the liquify operation
         else # Prep & perform a direct conversion
           # Delete nested data and vars objects
           build.data.remove_scope("data")
           build.data.remove_scope("vars")
           # Add vars from CLI or config args
-          build.data.add_data!("", build.variables) unless build.variables.empty?
-          build.data.add_data!("", @passed_vars) unless @passed_vars.empty?
+          build.data.add_data!(build.variables) unless build.variables.empty?
+          build.data.add_data!(@passed_vars) unless @passed_vars.empty?
           regurgidata(build.data, build.output)
         end
       end
@@ -222,31 +238,6 @@ def validate_file_input file, type
   end
 end
 
-def validate_config_structure config
-  unless config.is_a? Array
-    message =  "The configuration file is not properly structured."
-    @logger.error message
-    raise "ConfigStructError"
-  else
-    if (defined?(config['action'])).nil?
-      message =  "Every listing in the configuration file needs an action type declaration."
-      @logger.error message
-      raise "ConfigStructError"
-    end
-  end
-# TODO More validation needed
-end
-
-def contains_liquid filename
-  File.open(filename, "r") do |file_proc|
-    file_proc.each_line do |row|
-      if row.match(/.*\{\%.*\%\}.*|.*\{\{.*\}\}.*/)
-        return true
-      end
-    end
-  end
-end
-
 def explainer_init out=nil
   unless @explainer
     if out == "STDOUT"
@@ -297,12 +288,7 @@ class BuildConfig
     if (defined?(config['compile'][0])) # The config is formatted for vesions < 0.3.0; convert it
       config = deprecated_format(config)
     end
-
-    # validations
-    unless config.is_a? Array
-      raise "ConfigStructError"
-    end
-
+    validate(config)
     @cfg = config
   end
 
@@ -319,6 +305,13 @@ class BuildConfig
     return config['compile']
   end
 
+  def validate config
+    unless config.is_a? Array
+      raise "ConfigStructError"
+    end
+  # TODO More validation needed
+  end
+
 end #class BuildConfig
 
 class BuildConfigStep
@@ -326,7 +319,7 @@ class BuildConfigStep
   def initialize step
     @step = step
     if (defined?(@step['action'])).nil?
-      raise "ConfigStructError"
+      raise "StepStructError"
     end
     @step['options'] = nil unless defined?(step['options'])
     validate()
@@ -427,7 +420,7 @@ class BuildConfigStep
     for req in reqs
       if (defined?(@step[req])).nil?
         @logger.error "Every #{@step['action']}-type in the configuration file needs a '#{req}' declaration."
-        raise "ConfigStructError"
+        raise "ConfigStepError"
       end
     end
   end
@@ -447,6 +440,10 @@ class Build
 
   def template
     @build['template']
+  end
+
+  def includes_dirs
+    @build['includes_dirs']
   end
 
   def output
@@ -479,7 +476,7 @@ class Build
     @data unless @data.nil?
   end
 
-  def add_data! obj, scope
+  def add_data! obj, scope=""
     @data.add_data!(obj, scope)
   end
 
@@ -714,7 +711,7 @@ class DataObj
     @data = {"vars" => {}}
   end
 
-  def add_data! scope="", data
+  def add_data! data, scope=""
     # Merges data into existing scope or creates a new scope
     if scope.empty? # store new object at root of this object
       self.data.merge!data
@@ -844,6 +841,8 @@ end
 # Parse given data using given template, generating given output
 def liquify data_obj, template_file, output
   validate_file_input(template_file, "template")
+  # inject :includes_dirs as needed
+  data_obj.add_data!(@includes_dirs, :includes_dirs) unless data_obj.data[:includes_dirs]
   begin
     template = File.read(template_file) # reads the template file
     template = Liquid::Template.parse(template) # compiles template
@@ -862,21 +861,22 @@ def liquify data_obj, template_file, output
   end
 end
 
-def cli_liquify data_file=nil, template_file=nil, output_file=nil, passed_vars
+def cli_liquify data_file=nil, template_file=nil, includes_dirs=nil, output_file=nil, passed_vars
   # converts command-line options into liquify or regurgidata inputs
   data_obj = DataObj.new()
   if data_file
     df = DataFiles.new(data_file)
     ingested = ingest_data(df.sources[0])
-    data_obj.add_data!("", ingested)
+    data_obj.add_data!(ingested)
   end
-  if template_file
-    data_obj.add_data!("data", ingested) if df
-    data_obj.add_data!("vars", passed_vars) if passed_vars
+  if template_file # process with Liquid
+    includes_dirs = @includes_dirs unless includes_dirs
+    data_obj.add_data!(ingested, "data") if df
+    data_obj.add_data!(passed_vars, "vars") if passed_vars
     liquify(data_obj, template_file, output_file)
-  else
+  else # direct conversion; dump passed vars in root
     data_obj.remove_scope("vars")
-    data_obj.add_data!("", passed_vars) if passed_vars
+    data_obj.add_data!(passed_vars) if passed_vars
     regurgidata(data_obj, output_file)
   end
 end
@@ -897,7 +897,6 @@ def regurgidata data_obj, output
   if new_data
     begin
       generate_file(new_data, output)
-      # File.open(output, 'w') { |file| file.write(new_data) }
       @logger.info "Data converted and saved to #{output}."
     rescue Exception => ex
       @logger.error "#{ex.class}: #{ex.message}"
@@ -1114,7 +1113,7 @@ def jekyll_serve build
   @logger.debug "Attempting Jekyll serve operation."
   config_file = build.props['files'][0]
   if build.props['arguments']
-    opts_args = build.props['arguments'].to_opts_args
+    opts_args = build.props['arguments'].argify
   end
   command = "bundle exec jekyll serve --config #{config_file} #{opts_args} --no-watch --skip-initial-build"
   system command
@@ -1170,24 +1169,6 @@ end
 # Text manipulation Classes, Modules, procs, etc
 # ===
 
-module HashMash
-
-  def to_opts_args
-    out = ''
-    if self.is_a? Hash # TODO Should also be testing for flatness
-      self.each do |opt,arg|
-        out = out + " --#{opt} #{arg}"
-      end
-    end
-    return out
-  end
-
-end
-
-class Hash
-  include HashMash
-end
-
 module ForceArray
   # So we can accept a list string ("item1.yml,item2.yml") or a single item ("item1.yml")
   # and convert to array as needed
@@ -1201,24 +1182,46 @@ module ForceArray
           obj = Array.new.push(obj)
         end
       else
-        raise "ForceArrayFail"
+        if obj.class == Hash
+          obj = obj.to_array
+        else
+          raise "ForceArrayFail"
+        end
       end
     end
     return obj.to_ary
+  end
+
+  def force_array!
+    self.force_array
   end
 
 end
 
 class String
   include ForceArray
+  include WordWrap
+
 # Adapted from Nikhil Gupta
 # http://nikhgupta.com/code/wrapping-long-lines-in-ruby-for-display-in-source-files/
-  def wrap options = {}
-    width = options.fetch(:width, 76)
-    commentchar = options.fetch(:commentchar, '')
-    self.strip.split("\n").collect do |line|
-      line.length > width ? line.gsub(/(.{1,#{width}})(\s+|$)/, "\\1\n#{commentchar}") : line
-    end.map(&:strip).join("\n#{commentchar}")
+  def wwrap width=76, prepend=''
+    self.wrap(width)
+    # self.prepend_lines(prepend)
+    # commentchar = options.fetch(:commentchar, '')
+    # width = options.fetch(:width, 76) - commentchar.size
+    # self.strip.split("\n").collect do |line|
+    #   line.gsub(/^(\s+)?#{commentchar}(.*)$/, '\\2')
+    #   line.gsub(/(.{1,#{width}})(\s+|$)/, "\\1\n") if line.length > width
+    #   line.gsub(/^(.*)$/, "#{commentchar}\\1")
+    #
+    # end
+    #
+  end
+
+  def prepend_lines chars
+    padding = chars.size
+    self.each_line do |l|
+      l.gsub(/^/, spaces).gsub(/^\s*$/, '')
   end
 
   def indent options = {}
@@ -1233,21 +1236,146 @@ class String
     self.wrap(width: width).indent(spaces: spaces)
   end
 
+  def contains_liquid?
+    self.each_line do |row|
+      if row.match(/.*\{\%.*\%\}.*|.*\{\{.*\}\}.*/)
+        return true
+      end
+    end
+    return false
+  end
+
+  def quote_wrap quotes="double", pattern="space"
+    # When a string contains certain chars, wrap it in certain quotes
+    # Pass 'double', 'single', or a pair of chars to quotes arg
+    # Pass 'space' as pattern to wrap any string that contains 1 or more spaces
+    pattern = "\s" if pattern == "space"
+    if quotes.size > 2
+      case quotes
+      when "double"
+        quotes = '""'
+      when "single"
+        quotes = "''"
+      else
+        quotes = "«»"
+      end
+    end
+    return self unless self.match(/#{pattern}/)
+    unless quotes.size != 2 # quotes must be a pair of chars
+      q1 = quotes[0]
+      q2 = quotes[1]
+      return self.prepend(q1).append(q2)
+    end
+  end
+
 end
 
 class Array
   include ForceArray
+
+  def to_hash
+    struct = {}
+    self.each do |p|
+      struct.merge!p if p.is_a? Hash
+    end
+    return struct
+  end
+end
+
+class Hash
+  include ForceArray
+
+  def to_array
+    # Converts a hash of key-value pairs to a flat array based on the first tier
+    out = []
+    self.each do |k,v|
+      out << {k => v}
+    end
+    return out
+  end
+
+  def argify template='dump' , delim=' '
+    # Converts a hash of key-value pairs to command-line option/argument listings
+    # Can be called with optional arguments:
+    # template :: Liquid-formatted parsing template string
+    #          Accepts:
+    #
+    #            'hyph'            :: -<key> <value>
+    #            'hyphhyph'        :: --<key> <value> (default)
+    #            'hyphchar'        :: -<k> <value>
+    #            'dump'            :: <key> <value>
+    #            'paramequal'      :: <key>=<value>
+    #            'valonly'         :: <value>
+    # delim    :: Delimiter -- any ASCII characters that separate the arguments
+    #
+    # For template-based usage, express the variables:
+    #    opt (the keyname) as {{opt}}
+    #    arg (the value) as {{arg}}
+    # EXAMPLES (my_hash = {"key1"=>"val1", "key2"=>"val2"})
+    # my_hash.argify                      #=> key1 val1 key2 val2
+    # my_hash.argify('hyphhyph')          #=> --key1 val1 --key2 val2
+    # my_hash.argify('hyphchar')          #=> -k val1 -k val2
+    # my_hash.argify('paramequal')        #=> key1=val1 key2=val2
+    # my_hash.argify('-a {{opt}}={{arg}}')
+    #                                          #=> -a key1=val1 -a key2=val2
+    # my_hash.argify('liquid', ' ', "{{opt}} `{{arg}}`")
+    #                                          #=> key1 `val1` key2 `val2`
+    # my_hash.argify('valonly', '||')     #=> val1||val2
+    raise "InvalidObject" unless self.is_a? Hash
+    if template.contains_liquid?
+      tp = template # use the passed Liquid template
+    else
+      case template # use a preset Liquid template by name
+      when "dump"
+        tp = "{{opt}} {{arg}}"
+      when "hyph"
+        tp = "-{{opt}} {{arg}}"
+      when "hyphhyph"
+        tp = "--{{opt}} {{arg}}"
+      when "hyphchar"
+        tp = "-{{ opt | downcase | split: '' | first }} {{arg}}"
+      when "paramequal"
+        tp = "{{opt}}={{arg}}"
+      when "valonly"
+        tp = "{{arg}}"
+      else
+        return "Liquid: Unrecognized argify template name"
+      end
+    end
+    tpl = Liquid::Template.parse(tp)
+    first = true
+    out = ''
+    self.each do |k,v|
+      # establish datasource
+      input = {"opt" => k, "arg" => v.quote_wrap(" ") }
+      if first
+        dlm = ""
+        first = false
+      else
+        dlm = delim
+      end
+      out += dlm + tpl.render(input)
+    end
+    return out.to_str.strip
+  end
 end
 
 # Extending Liquid filters/text manipulation
 module CustomFilters
-  include Jekyll::Filters
+  #
+  # LiquiDoc custom filters
+  #
+  include ForceArray
+
+  def wwrap input, width=76
+    input.wwrap
+  end
 
   def plainwrap input
-    input.wrap
+    input.wwrap
   end
-  def commentwrap input
-    input.wrap commentchar: "# "
+  def commentwrap input, token='# '
+    input.wwrap
   end
   def unwrap input # Not fully functional; inserts explicit '\n'
     if input
@@ -1256,21 +1384,106 @@ module CustomFilters
     end
   end
 
-  def slugify input
-    # Downcase
-    # Turn unwanted chars into the seperator
-    s = input.to_s.downcase
-    s.gsub!(/[^a-zA-Z0-9\-_\+\/]+/i, "-")
-    s
-  end
-
   def regexreplace input, regex, replacement=''
     input.to_s.gsub(Regexp.new(regex), replacement.to_s)
   end
 
+  # replacement for Jekyll's slugify
+  def slugify input, bridge="-", snip=true
+    s = input.to_s.downcase
+    s.gsub!(/[^a-z0-9]/, bridge)
+    if snip
+      while s.match("--")
+        s.gsub!("--", "-")
+      end
+      s.gsub!(/^-(.*)$/, "\\1")
+      s.gsub!(/^(.*)\-$/, "\\1")
+    end
+    s
+  end
+
+  #
+  # sterile-based filters
+  #
+
+  def to_slug input, delim='-'
+    o = input.dup
+    opts = {:delimiter=>delim}
+    o.to_slug(opts)
+    o
+  end
+
+  def transliterate input
+    o = input.dup
+    o.transliterate
+    o
+  end
+
+  def smart_format input
+    o = input.dup
+    o.smart_format
+    o
+  end
+
+  def encode_entities input
+    o = input.dup
+    o.encode_entities
+    o
+  end
+
+  def titlecase input
+    o = input.dup
+    o.titlecase
+    o
+  end
+
+  def strip_tags input
+    o = input.dup
+    o.strip_tags
+    o
+  end
+
+  def sterilize input
+    o = input.dup
+    o.sterilize
+    o
+  end
+
+  # Get all unique values for each item in an array, or each unique value of a desigated parameter in an array of hashes
+  #
+  # input - the object array
+  # property - (optional) parameter in which to select unique values (for hashes)
+  def uniq_prop_vals(array, property=nil)
+    return array unless array.is_a?(Array)
+    unless property
+      new_ary = array.uniq
+    else
+      new_ary = array.uniq { |i| i[property] }
+    end
+    new_ary.map { |i| i[property] }.compact
+  end
+
+  def asciidocify input
+    Asciidoctor.convert(input)
+  end
+
+  def to_cli_args input, tpl="dump", delim=" "
+    input.argify(tpl, delim)
+  end
+
+  def hash_to_array input
+    input.to_array
+  end
+
+  def holds_liquid input
+    o = false
+    o = true if input.contains_liquid?
+    o
+  end
+
 end
 
-# register custom Liquid filters
+# Register custom Liquid filters
 Liquid::Template.register_filter(CustomFilters)
 
 # ===
@@ -1291,36 +1504,43 @@ command_parser = OptionParser.new do|opts|
   end
 
   # Global Options
-  opts.on("-b PATH", "--base=PATH", "The base directory, relative to this script. Defaults to `.`, or pwd." ) do |n|
+  opts.on("-b PATH", "--base PATH", "The base directory, relative to this script. Defaults to `.`, or pwd." ) do |n|
     @base_dir = n
   end
 
-  opts.on("-B PATH", "--build=PATH", "The directory under which LiquiDoc should save automatically preprocessed files. Defaults to #{@base_dir}_build. Can be absolute or relative to the base path (-b/--base=). Do NOT append '/' to the build path." ) do |n|
+  opts.on("-B PATH", "--build PATH", "The directory under which LiquiDoc should save automatically preprocessed files. Defaults to #{@base_dir}_build. Can be absolute or relative to the base path (-b/--base=). Do NOT append '/' to the build path." ) do |n|
     @build_dir = n
   end
 
-  opts.on("-c", "--config=PATH", "Configuration file, enables preset source, template, and output.") do |n|
+  opts.on("-c", "--config PATH", "Configuration file, enables preset source, template, and output.") do |n|
     @config_file = @base_dir + n
   end
 
-  opts.on("-d PATH", "--data=PATH", "Semi-structured data source (input) path. Ex. path/to/data.yml. Required unless --config is called." ) do |n|
+  opts.on("-d PATH[,PATH]", "--data PATH[,PATH]", "Semi-structured data source (input) path. Ex. -d path/to/data.yml. Required unless --config is called." ) do |n|
     @data_file = @base_dir + n
   end
 
-  opts.on("-f PATH", "--from=PATH", "Directory to copy assets from." ) do |n|
+  opts.on("-f PATH", "--from PATH", "Directory to copy assets from." ) do |n|
     @attributes_file = n
   end
 
-  opts.on("-i PATH", "--index=PATH", "An AsciiDoc index file for mapping an Asciidoctor build." ) do |n|
+  opts.on("-i PATH", "--index PATH", "An AsciiDoc index file for mapping an Asciidoctor build." ) do |n|
     @index_file = n
   end
 
-  opts.on("-o PATH", "--output=PATH", "Output file path for generated content. Ex. path/to/file.adoc. Required unless --config is called.") do |n|
+  opts.on("-o PATH", "--output PATH", "Output file path for generated content. Ex. path/to/file.adoc. Required unless --config is called.") do |n|
     @output_file = @base_dir + n
   end
 
-  opts.on("-t PATH", "--template=PATH", "Path to liquid template. Required unless --configuration is called." ) do |n|
+  opts.on("-t PATH", "--template PATH", "Path to liquid template. Required unless --configuration is called." ) do |n|
     @template_file = @base_dir + n
+  end
+
+  opts.on("--includes PATH[,PATH]", "Paths to directories where includes (partials) can be found." ) do |n|
+    n.force_array!
+    puts n.class
+    # n.map { |p| @base_dir + p }
+    @includes_dirs = n
   end
 
   opts.on("--verbose", "Run verbose debug logging.") do |n|
@@ -1397,7 +1617,7 @@ explainer_init
 unless @config_file
   @logger.debug "Executing config-free build based on API/CLI arguments alone."
   if @data_file
-    cli_liquify(@data_file, @template_file, @output_file, @passed_vars)
+    cli_liquify(@data_file, @template_file, @includes_dirs, @output_file, @passed_vars)
   end
   if @index_file
     @logger.warn "Rendering via command line arguments is not yet implemented. Use a config file."

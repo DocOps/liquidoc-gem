@@ -43,4 +43,6 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "jekyll", "~>3.0"
   spec.add_runtime_dependency "jekyll-asciidoc", "~>2.1"
   spec.add_runtime_dependency "highline", "~>2.0"
+  spec.add_runtime_dependency "word_wrap", ">= 1.0.0"
+  spec.add_runtime_dependency "sterile", "~>1.0"
 end
