@@ -1,0 +1,15 @@
+params_hash:
+  key1: valu1
+  key2: valu2
+  key2: valu3
+
+params_array:
+  - key1: valu1
+  - key2: valu2
+  - key3: valu3
+
+multi_params_array:
+  - key_a: Kee-A-value
+    second: Valuu2a
+  - key_b: Kee-B-value
+    second: Valuu2b
