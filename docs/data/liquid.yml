@@ -1,0 +1,775 @@
+filters:
+
+  - key: date_to_xml_schema
+    name: Date to XML Schema
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Convert a Date into XML Schema (ISO 8601) format.
+    tags: [string,date,conversion]
+    group: date-format
+    examples:
+      - input: '{{ site.time | date_to_xmlschema }}'
+        output: '2008-11-07T13:07:54-08:00'
+
+  - key: date_to_rfc822
+    name: Date to RFC-822 Format
+    description: Convert a Date into the RFC-822 format used for RSS feeds.
+    tags: [string,date,conversion]
+    group: date-format
+    examples:
+      - input: '{{ site.time | date_to_rfc822 }}'
+        output: 'Mon, 07 Nov 2008 13:07:54 -0800'
+
+  - key: date_to_string
+    name: Date to String
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Convert a date to short format.
+    tags: [string,date,conversion]
+    group: date-format
+    examples:
+      - input: '{{ site.time | date_to_string }}'
+        output: '07 Nov 2008'
+      - input: '{{ site.time | date_to_string: "ordinal", "US" }}'
+        output: 'Nov 7th, 2008'
+
+  - key: date_to_long_string
+    name: Date to Long String
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Format a date to long format.
+    tags: [string,date,conversion]
+    group: date-format
+    examples:
+      - input: '{{ site.time | date_to_long_string }}'
+        output: '07 November 2008'
+      - input: '{{ site.time | date_to_long_string: "ordinal" }}'
+        output: '7th November 2008'
+
+  - key: where
+    name: Where
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Select all the objects in an array where the key has the given value.
+    tags: [array]
+    group: array-select
+    examples:
+      - input: '{{ users | where:"grad_year","2014" }}'
+        output: '[{"user"=>"ava","grad_year"=>2014},{"user"=>"julia","grad_year"=>2014}]'
+      - output: '{"user"=>"ava","grad_year"=>2014,"joined"=>"2019-01-22"}'
+        input: |
+          {% assign member = users | where:"user","ava" %}
+          {{ member[0] }}
+
+    notes: To express a lone result record, use `result_var[0]`.
+
+  - key: where_exp
+    name: Where Expression
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Select all the objects in an array where the expression is true.
+    tags: [array]
+    group: array-select
+    examples:
+      - output: '[{"user"=>"ava","grad_year"=>2014},{"user"=>"julia","grad_year"=>2014}]'
+        input: |-
+          {{ site.members | where_exp:"item",
+          "item.grad_year == 2014" }}
+        input: |-
+          {{ site.members | where_exp:"item",
+          "item.grad_year < 2014" }}
+      - output: '[{"project"=>"foobar"},{"project"=>"fooman"}]'
+        input: |-
+          {{ site.members | where_exp:"item",
+          "item.projects contains 'foo'" }}
+
+  - key: group_by
+    name: Group By
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Group an array's items by a given property.
+    tags: [array]
+    group: array-organizing
+    examples:
+      - input: '{{ site.members | group_by:"grad_year" }}'
+        output: |-
+          [{"name"=>"2013", "items"=>[...]},
+          {"name"=>"2014", "items"=>[...]}]
+
+  - key: group_by_exp
+    name: Group By Expression
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Group an array's items using a Liquid expression.
+    tags: [array]
+    group: array-organizing
+    examples:
+      - input: |-
+          {{ site.members | group_by_exp: "item",
+          "item.grad_year | truncate: 3, ''" }}
+        output: |-
+          [{"name"=>"201", "items"=>[...]},
+          {"name"=>"200", "items"=>[...]}]
+
+  - key: xml_escape
+    name: XML Escape
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Escape some text for use in XML.
+    group: string-escape
+    examples:
+      - input: '{{ "<strong>some text</strong>" | xml_escape }}'
+        output: '&lt;strong&gt;some text&lt;/strong&gt;'
+
+  - key: cgi_escape
+    name: CGI Escape
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      CGI escape a string for use in a URL. Replaces any special characters
+      with appropriate `%XX` replacements. CGI escape normally
+      replaces a space with a plus `+` sign.
+    group: string-escape
+    examples:
+      - input: '{{ "foo, bar; baz?" | cgi_escape }}'
+        output: 'foo%2C+bar%3B+baz%3F'
+
+  - key: uri_escape
+    name: URI Escape
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      Percent encodes any special characters in a URI.
+      URI escape normally replaces a space with `%20`.
+      link:https://en.wikipedia.org/wiki/Percent-encoding#Types_of_URI_characters[Reserved characters]
+      will not be escaped.
+    group: string-escape
+    examples:
+      - input: '{{ "http://foo.com/?q=foo, \bar?" | uri_escape }}'
+        output: 'http://foo.com/?q=foo,%20%5Cbar?'
+
+  - key: number_of_words
+    name: Number of Words
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Count the number of words in a text.
+    tags: [string]
+    group: string-analysis
+    examples:
+      - input: '{{ page.content | number_of_words }}'
+        output: 1337
+
+  - key: array_to_sentence_string
+    name: Array to Sentence
+    source: Jekyll
+    support: [Jekyll]
+    description: >-
+      Convert an array into a sentence. Useful for listing tags.
+      Optional argument for connector.
+    related: []
+    group: object-conversion
+    examples:
+      - input: '{{ tags_array | array_to_sentence_string }}'
+        output: 'foo, bar, and baz'
+      - input: '{{ tags_array | array_to_sentence_string: "or" }}'
+        output: 'foo, bar, or baz'
+
+  - key: array_to_serial
+    name: Array to Serial
+    source: Jekyll
+    support: [LiquiDoc]
+    description: >-
+      Convert an array into a sentence. Useful for listing tags.
+      Optional argument for connector.
+    group: object-conversion
+    examples:
+      - input: '{{ tags_array | array_to_serial }}'
+        output: 'foo, bar, and baz'
+      - input: '{{ tags_array | array_to_serial: "or" }}'
+        output: 'foo, bar, or baz'
+      - input: '{{ tags_array | shift | array_to_serial: "or" }}'
+        output: 'foo, baz'
+
+  - key: slugify
+    name: Slugify
+    source: LiquiDoc
+    support: [LiquiDoc]
+    description: Convert a string into a lowercase URL "slug". (This is not the complete Jekyll version.)
+    group: string-conversion
+    examples:
+      - input: '{{ "The _config.yml file" | slugify }}'
+        output: 'the-config-yml-file'
+
+  - key: jsonify
+    name: Data To JSON
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Convert Hash or Array to JSON.
+    group: object-conversion
+    examples:
+      - input: '{{ site.data.projects | jsonify }}'
+        output: <JSON object>
+
+  - key: normalize_whitespace
+    name: Normalize Whitespace
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Replace any occurrence of whitespace with a single space.
+    group: string-conversion
+    examples:
+      - input: '{{ "a    b" | normalize_whitespace }}'
+        output: a b
+
+  - key: sort
+    name: Sort
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      Sort an array. Optional arguments for hashes
+      1. property name
+      2. nils order (_first_ or _last_).
+    tags: [array]
+    group: array-organizing
+    examples:
+      - input: '{{ page.tags | sort }}'
+        returns: A one-dimensional array, alphabetized
+      - input: '{{ site.posts | sort: "author" }}'
+        returns: An array of hashes, alphabetized by the value of the `author` property
+      - input: '{{ site.pages | sort: "title", "last" }}'
+        returns: An array of hashes, alphabetized by the `title` property's values, with items lacking titles (nil) at the end
+
+  - key: sample
+    name: Sample
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: 'Pick a random value from an array. Optionally, pick multiple values.'
+    tags: [array]
+    group: array-select
+    examples:
+      - input: '{{ site.pages | sample }}'
+        returns: An array of one randomly chosen array item.
+      - input: '{{ site.pages | sample: 2 }}'
+        returns: An array of two randomly chosen array items.
+
+  - key: to_integer
+    name: To Integer
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Convert a string or boolean to integer.
+    tags: [string,conversion,math]
+    group: object-conversion
+    examples:
+      - input: '{{ false | to_integer }}'
+        output: 0
+      - output: Samesies!
+        input: |
+          {% assign five = "5" | to_integer %}
+          {% if five == 5 %}Samesies!{% endif %}
+
+  - key: push
+    name: Push
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      Insert an item at the end of an array
+    tags: [array]
+    group: array-management
+    examples:
+      - input: '{{ page.tags | push: "Spokane" }}'
+        output: '["Seattle", "Tacoma", "Spokane"]'
+
+  - key: pop
+    name: Pop
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      Remove an item from the end of an array
+    tags: [array]
+    group: array-management
+    examples:
+      - input: '{{ page.tags | pop }}'
+        output: '["Seattle"]'
+
+  - key: shift
+    name: Shift
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      Remove an item from the beginning of an array
+    tags: [array]
+    group: array-management
+    examples:
+      - input: '{{ page.tags | shift }}'
+        output: '["Tacoma"]'
+
+  - key: unshift
+    name: Unshift
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: >-
+      Insert an item at the beginning of an array
+    tags: [array]
+    group: array-management
+    examples:
+      - input: '{{ page.tags | unshift: "Olympia" }}'
+        output: '["Olympia", "Seattle", "Tacoma"]'
+
+  - key: inspect
+    name: Inspect
+    source: Jekyll
+    support: [Jekyll,LiquiDoc]
+    description: Convert an object into its String representation for debugging.
+    tags: [conversion]
+    group: object-analysis
+    examples:
+      - input: '{{ some_var | inspect }}'
+
+  - key: abs
+    name: Absolute Value
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: append
+    name: Append
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-management
+
+  - key: at_least
+    name: At Least
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: at_most
+    name: At Most
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: capitalize
+    name: Capitalize
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: ceil
+    name: Ceiling
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: compact
+    name: Compact
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array]
+
+  - key: concat
+    name: Concatenate
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array]
+
+  - key: date
+    name: Date Format
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [string,date]
+
+  - key: default
+    name: Default
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [variable]
+
+  - key: divided_by
+    name: Divided By
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: downcase
+    name: Downcase
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: escape
+    name: Escape
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: escape_once
+    name: Escape Once
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: first
+    name: First
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array]
+    group: array-select
+
+  - key: floor
+    name: Floor
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: join
+    name: Join
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array,conversion]
+    group: object-conversion
+
+  - key: last
+    name: Last
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array]
+    group: array-select
+
+  - key: lstrip
+    name: Left Strip
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-management
+
+  - key: map
+    name: Map
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array,conversion]
+    group: object-conversion
+
+  - key: minus
+    name: Minus (subtract)
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: modulo
+    name: Modulo
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: newline_to_br
+    name: Newline to Break Tag
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: plus
+    name: Plus (add)
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: prepend
+    name: prepend
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-management
+
+  - key: remove
+    name: Remove
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: remove_first
+    name: Remove First
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: replace
+    name: Replace
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: replace_first
+    name: replace_first
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: reverse
+    name: Reverse
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array]
+    group: array-organizing
+
+  - key: round
+    name: Round
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: rstrip
+    name: Right Strip
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: size
+    name: Size
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [string,array]
+    group: object-analysis
+
+  - key: slice
+    name: Slice
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [string,array,conversion]
+    group: object-conversion
+
+  - key: split
+    name: Split
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [string,array,conversion]
+
+  - key: strip
+    name: Strip
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: strip_html
+    name: Strip HTML
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: strip_newlines
+    name: Strip Newlines
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: times
+    name: Times (multiply)
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [math]
+    group: math
+
+  - key: truncate
+    name: Truncate
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-management
+
+  - key: truncatewords
+    name: truncatewords
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: uniq
+    name: uniq
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    tags: [array]
+
+  - key: upcase
+    name: upcase
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-conversion
+
+  - key: url_decode
+    name: URL Decode
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-recode
+
+  - key: url_encode
+    name: URL Encode
+    source: Liquid
+    support: [Jekyll,LiquiDoc]
+    group: string-recode
+
+  - key: wrap
+    name: Wrap
+    source: LiquiDoc
+    support: [LiquiDoc]
+    group: string-conversion
+    examples:
+      - input: '{{ "A string that is obviously longer than 25 characters" | wrap: 25 }}'
+        output: |-
+          A string that is obviously longer
+          than 25 characters
+
+  - key: commentwrap
+    name: Comment Wrap
+    source: LiquiDoc
+    support: [LiquiDoc]
+    group: string-conversion
+    examples:
+      - input: '{{ comment_text | commentwrap: 25, "// " }}'
+        output: |-
+          // A string that is obviously longer
+          // than 25 characters
+
+  - key: to_cli_args
+    name: Hash Params to CLI Arguments
+    source: LiquiDoc
+    support: [LiquiDoc]
+    group: object-conversion
+    description: Turn a hash of key-value pairs into a string of CLI-formatted arguments.
+    examples:
+      - input: '{{ my_flat_hash | hash_to_cli_args }}'
+        output: '--key1 val1 --key2 val2 --key3 val3'
+      - input: '{{ my_flat_hash | hash_to_cli_args: "passalong", " ", "-v " }}'
+        output: '-v key1=val1 -v key2=val2 -v key3=val3'
+      # - output: '--arg=arg1['val1']++--arg=arg2['val2']++--arg=arg3['val3']'
+      #   input: |-
+      #     {% capture args_tpl %}{% raw %}--arg={{ opt }}['{{ arg }}']{% endraw %}{% endcapture %}
+      #     {{ my_flat_hash | hash_to_cli_args: "-{{optflag}}={{opt}}[{{arg}}]", "++" }}
+
+  - key: regexreplace
+    name: Regular Expression Replace
+    source: LiquiDoc
+    support: [LiquiDoc]
+    description: Use regular expressions to match and replace text patterns.
+    group: string-management
+    examples:
+      - input: '{{ "name=content" | regexreplace: "^\=|\s$", ": " }}'
+        output: "name: content"
+      - input: '{{ "name=content" | regexreplace: "([\w]+):\s([\w]+)", "\1=\2" }}'
+        output: "key=content"
+
+  - key: transliterate
+    name: Transliterate to ASCII
+    source: sterile
+    support: [LiquiDoc]
+    description: Convert Unicode [and accented ASCII] characters to their plain-text ASCII equivalents.
+    group: string-recode
+    examples:
+      - input: '{{ "šţɽĩɳģ" | transliterate }}'
+        output: string
+
+  - key: smart_format
+    name: Smart Format
+    source: sterile
+    support: [LiquiDoc]
+    description: Convert UTF-8 or HTML-tagged text to “curly” quotes, emdashes, copyright, trademark, etc.
+    group: string-conversion
+    examples:
+      - input: |-
+          {% capture statement %}“He said, ‘Away, Drake!’”{% endcapture %}
+          {{ statement | smart_format }}
+        output: “He said, ‘Away, Drake!’”
+      - input: |-
+          {% capture statement %}"He said, <b>'Away, Drake!'</b>"{% endcapture %}
+          {{ statement | smart_format }}
+        output: “He said, ‘Away, Drake!’”
+
+  - key: encode_entities
+    name: Encode Entities
+    source: sterile
+    support: [LiquiDoc]
+    description: Turn Unicode characters into their HTML equivilents.
+    group: string-recode
+    examples:
+      - input: '{{ "“Economy Hits Bottom,” ran the headline" | encode_entities }}'
+        output: '&ldquo;Economy Hits Bottom,&rdquo; ran the headline'
+
+  - key: decode_entities
+    name: Decode Entities
+    source: sterile
+    support: [LiquiDoc]
+    description: Turn HTML entities into Unicode characters.
+    group: string-recode
+    examples:
+      - input: '{{ "&ldquo;Economy Hits Bottom,&rdquo; ran the headline" | decode_entities }}'
+        output: '“Economy Hits Bottom,” ran the headline'
+
+  - key: titlecase
+    name: Titlecase
+    source: sterile
+    support: [LiquiDoc]
+    description: Format text appropriately for titles.
+    group: string-conversion
+    examples:
+      - output: "Q&A With Steve Jobs: 'That's What Happens in Technology'"
+        input: |
+          {{ "Q&A with Steve Jobs: 'That's what happens in technology'" || titlecase }}
+
+  - key: strip_tags
+    name: strip_tags
+    source: sterile
+    support: [LiquiDoc]
+    description: Remove HTML/XML tags from text. Also strips out comments, PHP and ERB style tags.
+    group: string-conversion
+    examples:
+      - output: Visit our website!
+        input: |
+          {{ 'Visit our <a href="http://example.com">website!</a>' | strip_tags }}
+
+  - key: sterilize
+    name: Sterilize
+    source: sterile
+    support: [LiquiDoc]
+    description: Transliterate to ASCII and strip out any HTML/XML tags.
+    group: string-recode
+    examples:
+      - input: '{{ "<b>nåsty</b>" | sterilize }}'
+        output: nasty
+
+# UNSUPPORTED FILTERS
+
+  - key: Relative URL
+    name: Relative URL
+    source: Jekyll
+    support: [Jekyll]
+    supported: false
+
+  - key: Absolute URL
+    name: Absolute URL
+    source: Jekyll
+    support: [Jekyll]
+    supported: false
+
+  - key: Markdownify
+    name: Markdownify
+    source: Jekyll
+    support: [Jekyll]
+    supported: false
+
+  - key: Smartify
+    name: Smartify
+    source: Jekyll
+    support: [Jekyll]
+    description: 'Convert "quotes" into &ldquo;smart quotes.&rdquo;'
+    supported: false
+
+  - key: sassify
+    name: Converting Sass/SCSS
+    description: Convert a Sass- or SCSS-formatted string into CSS.
+    source: Jekyll
+    support: [Jekyll]
+    supported: false
