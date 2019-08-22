@@ -1,0 +1,65 @@
+{%- assign groups = filters | uniq_prop_vals: "group" -%}
+{%- assign groups = groups | sort -%}
+{%- for grp in groups -%}
+// tag::group_{{ grp }}[]
+== {{ grp | titlecase | replace: "-", " " }} Filters
+{% assign objects = filters | where: "group", grp | sort: "key" %}
+{%- for f in objects -%}
+{%- unless f.supported == false %}
+// tag::filter_{{ f.key }}[]
+[[{{ f.key }}]]
+[.filter_api_block]
+****
+// tag::filter_{{ f.key }}_params[]
+[horizontal]
+Name:: *{{ f.name }}*
+Key:: `{{ f.key }}`
+{% if f.description and f.description != "" %}
+Description:: {{ f.description }}
+{% endif %}
+{% if f.notes and f.notes != "" %}
+Notes:: {{ f.notes }}
+{% endif %}
+// end::filter_{{ f.key }}_params[]
+{% if f.examples %}
+// tag::filter_{{ f.key }}_examples[]
+Examples::
++
+--
+{% for x in f.examples %}
+====
+.input
+[source,liquid]
+----
+{{ x.input }}
+----
+{% if x.returns and x.returns != "" %}
+.returns
+{{ x.returns }}
+{% endif %}
+{% if x.output and x.output != "" %}
+.output
+[source,liquid]
+----
+{{ x.output }}
+----
+{% endif %}
+====
+{% endfor %}
+--
+// end::filter_{{ f.key }}_examples[]
+{% endif %}
+[horizontal]
+Origin:: {% inc filter-origin.liquid filter=f %}
+{% assign relos = objects | where_exp: "item", "item.key != f.key" %}
+Related::
+{% for r in relos %}
+`<<{{ r.key }},{{ r.key }}>>`{% unless forloop.last %}, {% endunless %}{% endfor %}
+****
+{% endunless %}
+{% endfor %}
+
+// end::filter_{{ f.key }}[]
+
+// tag::group_{{ grp }}[]
+{% endfor %}

@@ -1,0 +1,11 @@
+{%- assign fltr = include.filter -%}
+{%- case fltr.source -%}
+  {%- when "Jekyll" -%}
+    link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+  {%- when "Liquid" -%}
+    link:https://shopify.github.io/liquid/filters/{{ fltr.key }}/[Shopify]
+  {%- when "sterile" -%}
+    link:https://github.com/pbhogan/sterile#{{ fltr.key | slugify }}[sterile gem]
+  {%- else -%}
+    {{ fltr.source }}
+{%- endcase -%}

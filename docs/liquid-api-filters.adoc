@@ -1,0 +1,3479 @@
+// tag::group_array-management[]
+== Array Management Filters
+
+// tag::filter_pop[]
+[[pop]]
+[.filter_api_block]
+****
+// tag::filter_pop_params[]
+[horizontal]
+Name:: *Pop*
+Key:: `pop`
+
+Description:: Remove an item from the end of an array
+
+
+// end::filter_pop_params[]
+
+// tag::filter_pop_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ page.tags | pop }}
+----
+
+
+.output
+[source,liquid]
+----
+["Seattle"]
+----
+
+====
+
+--
+// end::filter_pop_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<push,push>>`, 
+`<<shift,shift>>`, 
+`<<unshift,unshift>>`
+****
+
+
+// tag::filter_push[]
+[[push]]
+[.filter_api_block]
+****
+// tag::filter_push_params[]
+[horizontal]
+Name:: *Push*
+Key:: `push`
+
+Description:: Insert an item at the end of an array
+
+
+// end::filter_push_params[]
+
+// tag::filter_push_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ page.tags | push: "Spokane" }}
+----
+
+
+.output
+[source,liquid]
+----
+["Seattle", "Tacoma", "Spokane"]
+----
+
+====
+
+--
+// end::filter_push_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<pop,pop>>`, 
+`<<shift,shift>>`, 
+`<<unshift,unshift>>`
+****
+
+
+// tag::filter_shift[]
+[[shift]]
+[.filter_api_block]
+****
+// tag::filter_shift_params[]
+[horizontal]
+Name:: *Shift*
+Key:: `shift`
+
+Description:: Remove an item from the beginning of an array
+
+
+// end::filter_shift_params[]
+
+// tag::filter_shift_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ page.tags | shift }}
+----
+
+
+.output
+[source,liquid]
+----
+["Tacoma"]
+----
+
+====
+
+--
+// end::filter_shift_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<pop,pop>>`, 
+`<<push,push>>`, 
+`<<unshift,unshift>>`
+****
+
+
+// tag::filter_unshift[]
+[[unshift]]
+[.filter_api_block]
+****
+// tag::filter_unshift_params[]
+[horizontal]
+Name:: *Unshift*
+Key:: `unshift`
+
+Description:: Insert an item at the beginning of an array
+
+
+// end::filter_unshift_params[]
+
+// tag::filter_unshift_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ page.tags | unshift: "Olympia" }}
+----
+
+
+.output
+[source,liquid]
+----
+["Olympia", "Seattle", "Tacoma"]
+----
+
+====
+
+--
+// end::filter_unshift_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<pop,pop>>`, 
+`<<push,push>>`, 
+`<<shift,shift>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_array-management[]
+// tag::group_array-organizing[]
+== Array Organizing Filters
+
+// tag::filter_group_by[]
+[[group_by]]
+[.filter_api_block]
+****
+// tag::filter_group_by_params[]
+[horizontal]
+Name:: *Group By*
+Key:: `group_by`
+
+Description:: Group an array's items by a given property.
+
+
+// end::filter_group_by_params[]
+
+// tag::filter_group_by_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.members | group_by:"grad_year" }}
+----
+
+
+.output
+[source,liquid]
+----
+[{"name"=>"2013", "items"=>[...]},
+{"name"=>"2014", "items"=>[...]}]
+----
+
+====
+
+--
+// end::filter_group_by_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<group_by_exp,group_by_exp>>`, 
+`<<reverse,reverse>>`, 
+`<<sort,sort>>`
+****
+
+
+// tag::filter_group_by_exp[]
+[[group_by_exp]]
+[.filter_api_block]
+****
+// tag::filter_group_by_exp_params[]
+[horizontal]
+Name:: *Group By Expression*
+Key:: `group_by_exp`
+
+Description:: Group an array's items using a Liquid expression.
+
+
+// end::filter_group_by_exp_params[]
+
+// tag::filter_group_by_exp_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.members | group_by_exp: "item",
+"item.grad_year | truncate: 3, ''" }}
+----
+
+
+.output
+[source,liquid]
+----
+[{"name"=>"201", "items"=>[...]},
+{"name"=>"200", "items"=>[...]}]
+----
+
+====
+
+--
+// end::filter_group_by_exp_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<group_by,group_by>>`, 
+`<<reverse,reverse>>`, 
+`<<sort,sort>>`
+****
+
+
+// tag::filter_reverse[]
+[[reverse]]
+[.filter_api_block]
+****
+// tag::filter_reverse_params[]
+[horizontal]
+Name:: *Reverse*
+Key:: `reverse`
+
+
+// end::filter_reverse_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/reverse/[Shopify]
+
+Related::
+
+`<<group_by,group_by>>`, 
+`<<group_by_exp,group_by_exp>>`, 
+`<<sort,sort>>`
+****
+
+
+// tag::filter_sort[]
+[[sort]]
+[.filter_api_block]
+****
+// tag::filter_sort_params[]
+[horizontal]
+Name:: *Sort*
+Key:: `sort`
+
+Description:: Sort an array. Optional arguments for hashes 1. property name 2. nils order (_first_ or _last_).
+
+
+// end::filter_sort_params[]
+
+// tag::filter_sort_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ page.tags | sort }}
+----
+
+.returns
+A one-dimensional array, alphabetized
+
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ site.posts | sort: "author" }}
+----
+
+.returns
+An array of hashes, alphabetized by the value of the `author` property
+
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ site.pages | sort: "title", "last" }}
+----
+
+.returns
+An array of hashes, alphabetized by the `title` property's values, with items lacking titles (nil) at the end
+
+
+====
+
+--
+// end::filter_sort_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<group_by,group_by>>`, 
+`<<group_by_exp,group_by_exp>>`, 
+`<<reverse,reverse>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_array-organizing[]
+// tag::group_array-select[]
+== Array Select Filters
+
+// tag::filter_first[]
+[[first]]
+[.filter_api_block]
+****
+// tag::filter_first_params[]
+[horizontal]
+Name:: *First*
+Key:: `first`
+
+
+// end::filter_first_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/first/[Shopify]
+
+Related::
+
+`<<last,last>>`, 
+`<<sample,sample>>`, 
+`<<where,where>>`, 
+`<<where_exp,where_exp>>`
+****
+
+
+// tag::filter_last[]
+[[last]]
+[.filter_api_block]
+****
+// tag::filter_last_params[]
+[horizontal]
+Name:: *Last*
+Key:: `last`
+
+
+// end::filter_last_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/last/[Shopify]
+
+Related::
+
+`<<first,first>>`, 
+`<<sample,sample>>`, 
+`<<where,where>>`, 
+`<<where_exp,where_exp>>`
+****
+
+
+// tag::filter_sample[]
+[[sample]]
+[.filter_api_block]
+****
+// tag::filter_sample_params[]
+[horizontal]
+Name:: *Sample*
+Key:: `sample`
+
+Description:: Pick a random value from an array. Optionally, pick multiple values.
+
+
+// end::filter_sample_params[]
+
+// tag::filter_sample_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.pages | sample }}
+----
+
+.returns
+An array of one randomly chosen array item.
+
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ site.pages | sample: 2 }}
+----
+
+.returns
+An array of two randomly chosen array items.
+
+
+====
+
+--
+// end::filter_sample_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<first,first>>`, 
+`<<last,last>>`, 
+`<<where,where>>`, 
+`<<where_exp,where_exp>>`
+****
+
+
+// tag::filter_where[]
+[[where]]
+[.filter_api_block]
+****
+// tag::filter_where_params[]
+[horizontal]
+Name:: *Where*
+Key:: `where`
+
+Description:: Select all the objects in an array where the key has the given value.
+
+
+Notes:: To express a lone result record, use `result_var[0]`.
+
+// end::filter_where_params[]
+
+// tag::filter_where_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ users | where:"grad_year","2014" }}
+----
+
+
+.output
+[source,liquid]
+----
+[{"user"=>"ava","grad_year"=>2014},{"user"=>"julia","grad_year"=>2014}]
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{% assign member = users | where:"user","ava" %}
+{{ member[0] }}
+
+----
+
+
+.output
+[source,liquid]
+----
+{"user"=>"ava","grad_year"=>2014,"joined"=>"2019-01-22"}
+----
+
+====
+
+--
+// end::filter_where_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<first,first>>`, 
+`<<last,last>>`, 
+`<<sample,sample>>`, 
+`<<where_exp,where_exp>>`
+****
+
+
+// tag::filter_where_exp[]
+[[where_exp]]
+[.filter_api_block]
+****
+// tag::filter_where_exp_params[]
+[horizontal]
+Name:: *Where Expression*
+Key:: `where_exp`
+
+Description:: Select all the objects in an array where the expression is true.
+
+
+// end::filter_where_exp_params[]
+
+// tag::filter_where_exp_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.members | where_exp:"item",
+"item.grad_year < 2014" }}
+----
+
+
+.output
+[source,liquid]
+----
+[{"user"=>"ava","grad_year"=>2014},{"user"=>"julia","grad_year"=>2014}]
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ site.members | where_exp:"item",
+"item.projects contains 'foo'" }}
+----
+
+
+.output
+[source,liquid]
+----
+[{"project"=>"foobar"},{"project"=>"fooman"}]
+----
+
+====
+
+--
+// end::filter_where_exp_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<first,first>>`, 
+`<<last,last>>`, 
+`<<sample,sample>>`, 
+`<<where,where>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_array-select[]
+// tag::group_date-format[]
+== Date Format Filters
+
+// tag::filter_date_to_long_string[]
+[[date_to_long_string]]
+[.filter_api_block]
+****
+// tag::filter_date_to_long_string_params[]
+[horizontal]
+Name:: *Date to Long String*
+Key:: `date_to_long_string`
+
+Description:: Format a date to long format.
+
+
+// end::filter_date_to_long_string_params[]
+
+// tag::filter_date_to_long_string_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.time | date_to_long_string }}
+----
+
+
+.output
+[source,liquid]
+----
+07 November 2008
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ site.time | date_to_long_string: "ordinal" }}
+----
+
+
+.output
+[source,liquid]
+----
+7th November 2008
+----
+
+====
+
+--
+// end::filter_date_to_long_string_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<date_to_rfc822,date_to_rfc822>>`, 
+`<<date_to_string,date_to_string>>`, 
+`<<date_to_xml_schema,date_to_xml_schema>>`
+****
+
+
+// tag::filter_date_to_rfc822[]
+[[date_to_rfc822]]
+[.filter_api_block]
+****
+// tag::filter_date_to_rfc822_params[]
+[horizontal]
+Name:: *Date to RFC-822 Format*
+Key:: `date_to_rfc822`
+
+Description:: Convert a Date into the RFC-822 format used for RSS feeds.
+
+
+// end::filter_date_to_rfc822_params[]
+
+// tag::filter_date_to_rfc822_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.time | date_to_rfc822 }}
+----
+
+
+.output
+[source,liquid]
+----
+Mon, 07 Nov 2008 13:07:54 -0800
+----
+
+====
+
+--
+// end::filter_date_to_rfc822_examples[]
+
+[horizontal]
+Origin:: 
+
+Related::
+
+`<<date_to_long_string,date_to_long_string>>`, 
+`<<date_to_string,date_to_string>>`, 
+`<<date_to_xml_schema,date_to_xml_schema>>`
+****
+
+
+// tag::filter_date_to_string[]
+[[date_to_string]]
+[.filter_api_block]
+****
+// tag::filter_date_to_string_params[]
+[horizontal]
+Name:: *Date to String*
+Key:: `date_to_string`
+
+Description:: Convert a date to short format.
+
+
+// end::filter_date_to_string_params[]
+
+// tag::filter_date_to_string_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.time | date_to_string }}
+----
+
+
+.output
+[source,liquid]
+----
+07 Nov 2008
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ site.time | date_to_string: "ordinal", "US" }}
+----
+
+
+.output
+[source,liquid]
+----
+Nov 7th, 2008
+----
+
+====
+
+--
+// end::filter_date_to_string_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<date_to_long_string,date_to_long_string>>`, 
+`<<date_to_rfc822,date_to_rfc822>>`, 
+`<<date_to_xml_schema,date_to_xml_schema>>`
+****
+
+
+// tag::filter_date_to_xml_schema[]
+[[date_to_xml_schema]]
+[.filter_api_block]
+****
+// tag::filter_date_to_xml_schema_params[]
+[horizontal]
+Name:: *Date to XML Schema*
+Key:: `date_to_xml_schema`
+
+Description:: Convert a Date into XML Schema (ISO 8601) format.
+
+
+// end::filter_date_to_xml_schema_params[]
+
+// tag::filter_date_to_xml_schema_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.time | date_to_xmlschema }}
+----
+
+
+.output
+[source,liquid]
+----
+2008-11-07T13:07:54-08:00
+----
+
+====
+
+--
+// end::filter_date_to_xml_schema_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<date_to_long_string,date_to_long_string>>`, 
+`<<date_to_rfc822,date_to_rfc822>>`, 
+`<<date_to_string,date_to_string>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_date-format[]
+// tag::group_math[]
+== Math Filters
+
+// tag::filter_abs[]
+[[abs]]
+[.filter_api_block]
+****
+// tag::filter_abs_params[]
+[horizontal]
+Name:: *Absolute Value*
+Key:: `abs`
+
+
+// end::filter_abs_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/abs/[Shopify]
+
+Related::
+
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_at_least[]
+[[at_least]]
+[.filter_api_block]
+****
+// tag::filter_at_least_params[]
+[horizontal]
+Name:: *At Least*
+Key:: `at_least`
+
+
+// end::filter_at_least_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/at_least/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_at_most[]
+[[at_most]]
+[.filter_api_block]
+****
+// tag::filter_at_most_params[]
+[horizontal]
+Name:: *At Most*
+Key:: `at_most`
+
+
+// end::filter_at_most_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/at_most/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_ceil[]
+[[ceil]]
+[.filter_api_block]
+****
+// tag::filter_ceil_params[]
+[horizontal]
+Name:: *Ceiling*
+Key:: `ceil`
+
+
+// end::filter_ceil_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/ceil/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_divided_by[]
+[[divided_by]]
+[.filter_api_block]
+****
+// tag::filter_divided_by_params[]
+[horizontal]
+Name:: *Divided By*
+Key:: `divided_by`
+
+
+// end::filter_divided_by_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/divided_by/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_floor[]
+[[floor]]
+[.filter_api_block]
+****
+// tag::filter_floor_params[]
+[horizontal]
+Name:: *Floor*
+Key:: `floor`
+
+
+// end::filter_floor_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/floor/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_minus[]
+[[minus]]
+[.filter_api_block]
+****
+// tag::filter_minus_params[]
+[horizontal]
+Name:: *Minus (subtract)*
+Key:: `minus`
+
+
+// end::filter_minus_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/minus/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_modulo[]
+[[modulo]]
+[.filter_api_block]
+****
+// tag::filter_modulo_params[]
+[horizontal]
+Name:: *Modulo*
+Key:: `modulo`
+
+
+// end::filter_modulo_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/modulo/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_plus[]
+[[plus]]
+[.filter_api_block]
+****
+// tag::filter_plus_params[]
+[horizontal]
+Name:: *Plus (add)*
+Key:: `plus`
+
+
+// end::filter_plus_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/plus/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<round,round>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_round[]
+[[round]]
+[.filter_api_block]
+****
+// tag::filter_round_params[]
+[horizontal]
+Name:: *Round*
+Key:: `round`
+
+
+// end::filter_round_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/round/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<times,times>>`
+****
+
+
+// tag::filter_times[]
+[[times]]
+[.filter_api_block]
+****
+// tag::filter_times_params[]
+[horizontal]
+Name:: *Times (multiply)*
+Key:: `times`
+
+
+// end::filter_times_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/times/[Shopify]
+
+Related::
+
+`<<abs,abs>>`, 
+`<<at_least,at_least>>`, 
+`<<at_most,at_most>>`, 
+`<<ceil,ceil>>`, 
+`<<divided_by,divided_by>>`, 
+`<<floor,floor>>`, 
+`<<minus,minus>>`, 
+`<<modulo,modulo>>`, 
+`<<plus,plus>>`, 
+`<<round,round>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_math[]
+// tag::group_object-analysis[]
+== Object Analysis Filters
+
+// tag::filter_inspect[]
+[[inspect]]
+[.filter_api_block]
+****
+// tag::filter_inspect_params[]
+[horizontal]
+Name:: *Inspect*
+Key:: `inspect`
+
+Description:: Convert an object into its String representation for debugging.
+
+
+// end::filter_inspect_params[]
+
+// tag::filter_inspect_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ some_var | inspect }}
+----
+
+
+====
+
+--
+// end::filter_inspect_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<size,size>>`
+****
+
+
+// tag::filter_size[]
+[[size]]
+[.filter_api_block]
+****
+// tag::filter_size_params[]
+[horizontal]
+Name:: *Size*
+Key:: `size`
+
+
+// end::filter_size_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/size/[Shopify]
+
+Related::
+
+`<<inspect,inspect>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_object-analysis[]
+// tag::group_object-conversion[]
+== Object Conversion Filters
+
+// tag::filter_array_to_sentence_string[]
+[[array_to_sentence_string]]
+[.filter_api_block]
+****
+// tag::filter_array_to_sentence_string_params[]
+[horizontal]
+Name:: *Array to Sentence*
+Key:: `array_to_sentence_string`
+
+Description:: Convert an array into a sentence. Useful for listing tags. Optional argument for connector.
+
+
+// end::filter_array_to_sentence_string_params[]
+
+// tag::filter_array_to_sentence_string_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ tags_array | array_to_sentence_string }}
+----
+
+
+.output
+[source,liquid]
+----
+foo, bar, and baz
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ tags_array | array_to_sentence_string: "or" }}
+----
+
+
+.output
+[source,liquid]
+----
+foo, bar, or baz
+----
+
+====
+
+--
+// end::filter_array_to_sentence_string_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<array_to_serial,array_to_serial>>`, 
+`<<join,join>>`, 
+`<<jsonify,jsonify>>`, 
+`<<map,map>>`, 
+`<<slice,slice>>`, 
+`<<to_cli_args,to_cli_args>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_array_to_serial[]
+[[array_to_serial]]
+[.filter_api_block]
+****
+// tag::filter_array_to_serial_params[]
+[horizontal]
+Name:: *Array to Serial*
+Key:: `array_to_serial`
+
+Description:: Convert an array into a sentence. Useful for listing tags. Optional argument for connector.
+
+
+// end::filter_array_to_serial_params[]
+
+// tag::filter_array_to_serial_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ tags_array | array_to_serial }}
+----
+
+
+.output
+[source,liquid]
+----
+foo, bar, and baz
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ tags_array | array_to_serial: "or" }}
+----
+
+
+.output
+[source,liquid]
+----
+foo, bar, or baz
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ tags_array | shift | array_to_serial: "or" }}
+----
+
+
+.output
+[source,liquid]
+----
+foo, baz
+----
+
+====
+
+--
+// end::filter_array_to_serial_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<join,join>>`, 
+`<<jsonify,jsonify>>`, 
+`<<map,map>>`, 
+`<<slice,slice>>`, 
+`<<to_cli_args,to_cli_args>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_join[]
+[[join]]
+[.filter_api_block]
+****
+// tag::filter_join_params[]
+[horizontal]
+Name:: *Join*
+Key:: `join`
+
+
+// end::filter_join_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/join/[Shopify]
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<array_to_serial,array_to_serial>>`, 
+`<<jsonify,jsonify>>`, 
+`<<map,map>>`, 
+`<<slice,slice>>`, 
+`<<to_cli_args,to_cli_args>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_jsonify[]
+[[jsonify]]
+[.filter_api_block]
+****
+// tag::filter_jsonify_params[]
+[horizontal]
+Name:: *Data To JSON*
+Key:: `jsonify`
+
+Description:: Convert Hash or Array to JSON.
+
+
+// end::filter_jsonify_params[]
+
+// tag::filter_jsonify_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ site.data.projects | jsonify }}
+----
+
+
+.output
+[source,liquid]
+----
+<JSON object>
+----
+
+====
+
+--
+// end::filter_jsonify_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<array_to_serial,array_to_serial>>`, 
+`<<join,join>>`, 
+`<<map,map>>`, 
+`<<slice,slice>>`, 
+`<<to_cli_args,to_cli_args>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_map[]
+[[map]]
+[.filter_api_block]
+****
+// tag::filter_map_params[]
+[horizontal]
+Name:: *Map*
+Key:: `map`
+
+
+// end::filter_map_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/map/[Shopify]
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<array_to_serial,array_to_serial>>`, 
+`<<join,join>>`, 
+`<<jsonify,jsonify>>`, 
+`<<slice,slice>>`, 
+`<<to_cli_args,to_cli_args>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_slice[]
+[[slice]]
+[.filter_api_block]
+****
+// tag::filter_slice_params[]
+[horizontal]
+Name:: *Slice*
+Key:: `slice`
+
+
+// end::filter_slice_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/slice/[Shopify]
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<array_to_serial,array_to_serial>>`, 
+`<<join,join>>`, 
+`<<jsonify,jsonify>>`, 
+`<<map,map>>`, 
+`<<to_cli_args,to_cli_args>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_to_cli_args[]
+[[to_cli_args]]
+[.filter_api_block]
+****
+// tag::filter_to_cli_args_params[]
+[horizontal]
+Name:: *Hash Params to CLI Arguments*
+Key:: `to_cli_args`
+
+Description:: Turn a hash of key-value pairs into a string of CLI-formatted arguments.
+
+
+// end::filter_to_cli_args_params[]
+
+// tag::filter_to_cli_args_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ my_flat_hash | hash_to_cli_args }}
+----
+
+
+.output
+[source,liquid]
+----
+--key1 val1 --key2 val2 --key3 val3
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ my_flat_hash | hash_to_cli_args: "passalong", " ", "-v " }}
+----
+
+
+.output
+[source,liquid]
+----
+-v key1=val1 -v key2=val2 -v key3=val3
+----
+
+====
+
+--
+// end::filter_to_cli_args_examples[]
+
+[horizontal]
+Origin:: LiquiDoc
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<array_to_serial,array_to_serial>>`, 
+`<<join,join>>`, 
+`<<jsonify,jsonify>>`, 
+`<<map,map>>`, 
+`<<slice,slice>>`, 
+`<<to_integer,to_integer>>`
+****
+
+
+// tag::filter_to_integer[]
+[[to_integer]]
+[.filter_api_block]
+****
+// tag::filter_to_integer_params[]
+[horizontal]
+Name:: *To Integer*
+Key:: `to_integer`
+
+Description:: Convert a string or boolean to integer.
+
+
+// end::filter_to_integer_params[]
+
+// tag::filter_to_integer_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ false | to_integer }}
+----
+
+
+.output
+[source,liquid]
+----
+0
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{% assign five = "5" | to_integer %}
+{% if five == 5 %}Samesies!{% endif %}
+
+----
+
+
+.output
+[source,liquid]
+----
+Samesies!
+----
+
+====
+
+--
+// end::filter_to_integer_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<array_to_sentence_string,array_to_sentence_string>>`, 
+`<<array_to_serial,array_to_serial>>`, 
+`<<join,join>>`, 
+`<<jsonify,jsonify>>`, 
+`<<map,map>>`, 
+`<<slice,slice>>`, 
+`<<to_cli_args,to_cli_args>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_object-conversion[]
+// tag::group_string-analysis[]
+== String Analysis Filters
+
+// tag::filter_number_of_words[]
+[[number_of_words]]
+[.filter_api_block]
+****
+// tag::filter_number_of_words_params[]
+[horizontal]
+Name:: *Number of Words*
+Key:: `number_of_words`
+
+Description:: Count the number of words in a text.
+
+
+// end::filter_number_of_words_params[]
+
+// tag::filter_number_of_words_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ page.content | number_of_words }}
+----
+
+
+.output
+[source,liquid]
+----
+1337
+----
+
+====
+
+--
+// end::filter_number_of_words_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+****
+
+
+
+// end::filter_[]
+
+// tag::group_string-analysis[]
+// tag::group_string-conversion[]
+== String Conversion Filters
+
+// tag::filter_capitalize[]
+[[capitalize]]
+[.filter_api_block]
+****
+// tag::filter_capitalize_params[]
+[horizontal]
+Name:: *Capitalize*
+Key:: `capitalize`
+
+
+// end::filter_capitalize_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/capitalize/[Shopify]
+
+Related::
+
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_commentwrap[]
+[[commentwrap]]
+[.filter_api_block]
+****
+// tag::filter_commentwrap_params[]
+[horizontal]
+Name:: *Comment Wrap*
+Key:: `commentwrap`
+
+
+// end::filter_commentwrap_params[]
+
+// tag::filter_commentwrap_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ comment_text | commentwrap: 25, "// " }}
+----
+
+
+.output
+[source,liquid]
+----
+// A string that is obviously longer
+// than 25 characters
+----
+
+====
+
+--
+// end::filter_commentwrap_examples[]
+
+[horizontal]
+Origin:: LiquiDoc
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_downcase[]
+[[downcase]]
+[.filter_api_block]
+****
+// tag::filter_downcase_params[]
+[horizontal]
+Name:: *Downcase*
+Key:: `downcase`
+
+
+// end::filter_downcase_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/downcase/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_escape[]
+[[escape]]
+[.filter_api_block]
+****
+// tag::filter_escape_params[]
+[horizontal]
+Name:: *Escape*
+Key:: `escape`
+
+
+// end::filter_escape_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/escape/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_escape_once[]
+[[escape_once]]
+[.filter_api_block]
+****
+// tag::filter_escape_once_params[]
+[horizontal]
+Name:: *Escape Once*
+Key:: `escape_once`
+
+
+// end::filter_escape_once_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/escape_once/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_newline_to_br[]
+[[newline_to_br]]
+[.filter_api_block]
+****
+// tag::filter_newline_to_br_params[]
+[horizontal]
+Name:: *Newline to Break Tag*
+Key:: `newline_to_br`
+
+
+// end::filter_newline_to_br_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/newline_to_br/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_normalize_whitespace[]
+[[normalize_whitespace]]
+[.filter_api_block]
+****
+// tag::filter_normalize_whitespace_params[]
+[horizontal]
+Name:: *Normalize Whitespace*
+Key:: `normalize_whitespace`
+
+Description:: Replace any occurrence of whitespace with a single space.
+
+
+// end::filter_normalize_whitespace_params[]
+
+// tag::filter_normalize_whitespace_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "a    b" | normalize_whitespace }}
+----
+
+
+.output
+[source,liquid]
+----
+a b
+----
+
+====
+
+--
+// end::filter_normalize_whitespace_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_remove[]
+[[remove]]
+[.filter_api_block]
+****
+// tag::filter_remove_params[]
+[horizontal]
+Name:: *Remove*
+Key:: `remove`
+
+
+// end::filter_remove_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/remove/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_remove_first[]
+[[remove_first]]
+[.filter_api_block]
+****
+// tag::filter_remove_first_params[]
+[horizontal]
+Name:: *Remove First*
+Key:: `remove_first`
+
+
+// end::filter_remove_first_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/remove_first/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_replace[]
+[[replace]]
+[.filter_api_block]
+****
+// tag::filter_replace_params[]
+[horizontal]
+Name:: *Replace*
+Key:: `replace`
+
+
+// end::filter_replace_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/replace/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_replace_first[]
+[[replace_first]]
+[.filter_api_block]
+****
+// tag::filter_replace_first_params[]
+[horizontal]
+Name:: *replace_first*
+Key:: `replace_first`
+
+
+// end::filter_replace_first_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/replace_first/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_rstrip[]
+[[rstrip]]
+[.filter_api_block]
+****
+// tag::filter_rstrip_params[]
+[horizontal]
+Name:: *Right Strip*
+Key:: `rstrip`
+
+
+// end::filter_rstrip_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/rstrip/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_slugify[]
+[[slugify]]
+[.filter_api_block]
+****
+// tag::filter_slugify_params[]
+[horizontal]
+Name:: *Slugify*
+Key:: `slugify`
+
+Description:: Convert a string into a lowercase URL "slug". (This is not the complete Jekyll version.)
+
+
+// end::filter_slugify_params[]
+
+// tag::filter_slugify_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "The _config.yml file" | slugify }}
+----
+
+
+.output
+[source,liquid]
+----
+the-config-yml-file
+----
+
+====
+
+--
+// end::filter_slugify_examples[]
+
+[horizontal]
+Origin:: LiquiDoc
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_smart_format[]
+[[smart_format]]
+[.filter_api_block]
+****
+// tag::filter_smart_format_params[]
+[horizontal]
+Name:: *Smart Format*
+Key:: `smart_format`
+
+Description:: Convert UTF-8 or HTML-tagged text to “curly” quotes, emdashes, copyright, trademark, etc.
+
+
+// end::filter_smart_format_params[]
+
+// tag::filter_smart_format_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{% capture statement %}“He said, ‘Away, Drake!’”{% endcapture %}
+{{ statement | smart_format }}
+----
+
+
+.output
+[source,liquid]
+----
+“He said, ‘Away, Drake!’”
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{% capture statement %}"He said, <b>'Away, Drake!'</b>"{% endcapture %}
+{{ statement | smart_format }}
+----
+
+
+.output
+[source,liquid]
+----
+“He said, ‘Away, Drake!’”
+----
+
+====
+
+--
+// end::filter_smart_format_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#smart-format[sterile gem]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_strip[]
+[[strip]]
+[.filter_api_block]
+****
+// tag::filter_strip_params[]
+[horizontal]
+Name:: *Strip*
+Key:: `strip`
+
+
+// end::filter_strip_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/strip/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_strip_html[]
+[[strip_html]]
+[.filter_api_block]
+****
+// tag::filter_strip_html_params[]
+[horizontal]
+Name:: *Strip HTML*
+Key:: `strip_html`
+
+
+// end::filter_strip_html_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/strip_html/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_strip_newlines[]
+[[strip_newlines]]
+[.filter_api_block]
+****
+// tag::filter_strip_newlines_params[]
+[horizontal]
+Name:: *Strip Newlines*
+Key:: `strip_newlines`
+
+
+// end::filter_strip_newlines_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/strip_newlines/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_strip_tags[]
+[[strip_tags]]
+[.filter_api_block]
+****
+// tag::filter_strip_tags_params[]
+[horizontal]
+Name:: *strip_tags*
+Key:: `strip_tags`
+
+Description:: Remove HTML/XML tags from text. Also strips out comments, PHP and ERB style tags.
+
+
+// end::filter_strip_tags_params[]
+
+// tag::filter_strip_tags_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ 'Visit our <a href="http://example.com">website!</a>' | strip_tags }}
+
+----
+
+
+.output
+[source,liquid]
+----
+Visit our website!
+----
+
+====
+
+--
+// end::filter_strip_tags_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#strip-tags[sterile gem]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_titlecase[]
+[[titlecase]]
+[.filter_api_block]
+****
+// tag::filter_titlecase_params[]
+[horizontal]
+Name:: *Titlecase*
+Key:: `titlecase`
+
+Description:: Format text appropriately for titles.
+
+
+// end::filter_titlecase_params[]
+
+// tag::filter_titlecase_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "Q&A with Steve Jobs: 'That's what happens in technology'" || titlecase }}
+
+----
+
+
+.output
+[source,liquid]
+----
+Q&A With Steve Jobs: 'That's What Happens in Technology'
+----
+
+====
+
+--
+// end::filter_titlecase_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#titlecase[sterile gem]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_truncatewords[]
+[[truncatewords]]
+[.filter_api_block]
+****
+// tag::filter_truncatewords_params[]
+[horizontal]
+Name:: *truncatewords*
+Key:: `truncatewords`
+
+
+// end::filter_truncatewords_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/truncatewords/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<upcase,upcase>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_upcase[]
+[[upcase]]
+[.filter_api_block]
+****
+// tag::filter_upcase_params[]
+[horizontal]
+Name:: *upcase*
+Key:: `upcase`
+
+
+// end::filter_upcase_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/upcase/[Shopify]
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<wrap,wrap>>`
+****
+
+
+// tag::filter_wrap[]
+[[wrap]]
+[.filter_api_block]
+****
+// tag::filter_wrap_params[]
+[horizontal]
+Name:: *Wrap*
+Key:: `wrap`
+
+
+// end::filter_wrap_params[]
+
+// tag::filter_wrap_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "A string that is obviously longer than 25 characters" | wrap: 25 }}
+----
+
+
+.output
+[source,liquid]
+----
+A string that is obviously longer
+than 25 characters
+----
+
+====
+
+--
+// end::filter_wrap_examples[]
+
+[horizontal]
+Origin:: LiquiDoc
+
+Related::
+
+`<<capitalize,capitalize>>`, 
+`<<commentwrap,commentwrap>>`, 
+`<<downcase,downcase>>`, 
+`<<escape,escape>>`, 
+`<<escape_once,escape_once>>`, 
+`<<newline_to_br,newline_to_br>>`, 
+`<<normalize_whitespace,normalize_whitespace>>`, 
+`<<remove,remove>>`, 
+`<<remove_first,remove_first>>`, 
+`<<replace,replace>>`, 
+`<<replace_first,replace_first>>`, 
+`<<rstrip,rstrip>>`, 
+`<<slugify,slugify>>`, 
+`<<smart_format,smart_format>>`, 
+`<<strip,strip>>`, 
+`<<strip_html,strip_html>>`, 
+`<<strip_newlines,strip_newlines>>`, 
+`<<strip_tags,strip_tags>>`, 
+`<<titlecase,titlecase>>`, 
+`<<truncatewords,truncatewords>>`, 
+`<<upcase,upcase>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_string-conversion[]
+// tag::group_string-escape[]
+== String Escape Filters
+
+// tag::filter_cgi_escape[]
+[[cgi_escape]]
+[.filter_api_block]
+****
+// tag::filter_cgi_escape_params[]
+[horizontal]
+Name:: *CGI Escape*
+Key:: `cgi_escape`
+
+Description:: CGI escape a string for use in a URL. Replaces any special characters with appropriate `%XX` replacements. CGI escape normally replaces a space with a plus `+` sign.
+
+
+// end::filter_cgi_escape_params[]
+
+// tag::filter_cgi_escape_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "foo, bar; baz?" | cgi_escape }}
+----
+
+
+.output
+[source,liquid]
+----
+foo%2C+bar%3B+baz%3F
+----
+
+====
+
+--
+// end::filter_cgi_escape_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<uri_escape,uri_escape>>`, 
+`<<xml_escape,xml_escape>>`
+****
+
+
+// tag::filter_uri_escape[]
+[[uri_escape]]
+[.filter_api_block]
+****
+// tag::filter_uri_escape_params[]
+[horizontal]
+Name:: *URI Escape*
+Key:: `uri_escape`
+
+Description:: Percent encodes any special characters in a URI. URI escape normally replaces a space with `%20`. link:https://en.wikipedia.org/wiki/Percent-encoding#Types_of_URI_characters[Reserved characters] will not be escaped.
+
+
+// end::filter_uri_escape_params[]
+
+// tag::filter_uri_escape_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "http://foo.com/?q=foo, \bar?" | uri_escape }}
+----
+
+
+.output
+[source,liquid]
+----
+http://foo.com/?q=foo,%20%5Cbar?
+----
+
+====
+
+--
+// end::filter_uri_escape_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<cgi_escape,cgi_escape>>`, 
+`<<xml_escape,xml_escape>>`
+****
+
+
+// tag::filter_xml_escape[]
+[[xml_escape]]
+[.filter_api_block]
+****
+// tag::filter_xml_escape_params[]
+[horizontal]
+Name:: *XML Escape*
+Key:: `xml_escape`
+
+Description:: Escape some text for use in XML.
+
+
+// end::filter_xml_escape_params[]
+
+// tag::filter_xml_escape_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "<strong>some text</strong>" | xml_escape }}
+----
+
+
+.output
+[source,liquid]
+----
+&lt;strong&gt;some text&lt;/strong&gt;
+----
+
+====
+
+--
+// end::filter_xml_escape_examples[]
+
+[horizontal]
+Origin:: link:https://jekyllrb.com/docs/liquid/filters/[Jekyll]
+
+Related::
+
+`<<cgi_escape,cgi_escape>>`, 
+`<<uri_escape,uri_escape>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_string-escape[]
+// tag::group_string-management[]
+== String Management Filters
+
+// tag::filter_append[]
+[[append]]
+[.filter_api_block]
+****
+// tag::filter_append_params[]
+[horizontal]
+Name:: *Append*
+Key:: `append`
+
+
+// end::filter_append_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/append/[Shopify]
+
+Related::
+
+`<<lstrip,lstrip>>`, 
+`<<prepend,prepend>>`, 
+`<<regexreplace,regexreplace>>`, 
+`<<truncate,truncate>>`
+****
+
+
+// tag::filter_lstrip[]
+[[lstrip]]
+[.filter_api_block]
+****
+// tag::filter_lstrip_params[]
+[horizontal]
+Name:: *Left Strip*
+Key:: `lstrip`
+
+
+// end::filter_lstrip_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/lstrip/[Shopify]
+
+Related::
+
+`<<append,append>>`, 
+`<<prepend,prepend>>`, 
+`<<regexreplace,regexreplace>>`, 
+`<<truncate,truncate>>`
+****
+
+
+// tag::filter_prepend[]
+[[prepend]]
+[.filter_api_block]
+****
+// tag::filter_prepend_params[]
+[horizontal]
+Name:: *prepend*
+Key:: `prepend`
+
+
+// end::filter_prepend_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/prepend/[Shopify]
+
+Related::
+
+`<<append,append>>`, 
+`<<lstrip,lstrip>>`, 
+`<<regexreplace,regexreplace>>`, 
+`<<truncate,truncate>>`
+****
+
+
+// tag::filter_regexreplace[]
+[[regexreplace]]
+[.filter_api_block]
+****
+// tag::filter_regexreplace_params[]
+[horizontal]
+Name:: *Regular Expression Replace*
+Key:: `regexreplace`
+
+Description:: Use regular expressions to match and replace text patterns.
+
+
+// end::filter_regexreplace_params[]
+
+// tag::filter_regexreplace_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "name=content" | regexreplace: "^\=|\s$", ": " }}
+----
+
+
+.output
+[source,liquid]
+----
+name: content
+----
+
+====
+
+====
+.input
+[source,liquid]
+----
+{{ "name=content" | regexreplace: "([\w]+):\s([\w]+)", "\1=\2" }}
+----
+
+
+.output
+[source,liquid]
+----
+key=content
+----
+
+====
+
+--
+// end::filter_regexreplace_examples[]
+
+[horizontal]
+Origin:: LiquiDoc
+
+Related::
+
+`<<append,append>>`, 
+`<<lstrip,lstrip>>`, 
+`<<prepend,prepend>>`, 
+`<<truncate,truncate>>`
+****
+
+
+// tag::filter_truncate[]
+[[truncate]]
+[.filter_api_block]
+****
+// tag::filter_truncate_params[]
+[horizontal]
+Name:: *Truncate*
+Key:: `truncate`
+
+
+// end::filter_truncate_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/truncate/[Shopify]
+
+Related::
+
+`<<append,append>>`, 
+`<<lstrip,lstrip>>`, 
+`<<prepend,prepend>>`, 
+`<<regexreplace,regexreplace>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_string-management[]
+// tag::group_string-recode[]
+== String Recode Filters
+
+// tag::filter_decode_entities[]
+[[decode_entities]]
+[.filter_api_block]
+****
+// tag::filter_decode_entities_params[]
+[horizontal]
+Name:: *Decode Entities*
+Key:: `decode_entities`
+
+Description:: Turn HTML entities into Unicode characters.
+
+
+// end::filter_decode_entities_params[]
+
+// tag::filter_decode_entities_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "&ldquo;Economy Hits Bottom,&rdquo; ran the headline" | decode_entities }}
+----
+
+
+.output
+[source,liquid]
+----
+“Economy Hits Bottom,” ran the headline
+----
+
+====
+
+--
+// end::filter_decode_entities_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#decode-entities[sterile gem]
+
+Related::
+
+`<<encode_entities,encode_entities>>`, 
+`<<sterilize,sterilize>>`, 
+`<<transliterate,transliterate>>`, 
+`<<url_decode,url_decode>>`, 
+`<<url_encode,url_encode>>`
+****
+
+
+// tag::filter_encode_entities[]
+[[encode_entities]]
+[.filter_api_block]
+****
+// tag::filter_encode_entities_params[]
+[horizontal]
+Name:: *Encode Entities*
+Key:: `encode_entities`
+
+Description:: Turn Unicode characters into their HTML equivilents.
+
+
+// end::filter_encode_entities_params[]
+
+// tag::filter_encode_entities_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "“Economy Hits Bottom,” ran the headline" | encode_entities }}
+----
+
+
+.output
+[source,liquid]
+----
+&ldquo;Economy Hits Bottom,&rdquo; ran the headline
+----
+
+====
+
+--
+// end::filter_encode_entities_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#encode-entities[sterile gem]
+
+Related::
+
+`<<decode_entities,decode_entities>>`, 
+`<<sterilize,sterilize>>`, 
+`<<transliterate,transliterate>>`, 
+`<<url_decode,url_decode>>`, 
+`<<url_encode,url_encode>>`
+****
+
+
+// tag::filter_sterilize[]
+[[sterilize]]
+[.filter_api_block]
+****
+// tag::filter_sterilize_params[]
+[horizontal]
+Name:: *Sterilize*
+Key:: `sterilize`
+
+Description:: Transliterate to ASCII and strip out any HTML/XML tags.
+
+
+// end::filter_sterilize_params[]
+
+// tag::filter_sterilize_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "<b>nåsty</b>" | sterilize }}
+----
+
+
+.output
+[source,liquid]
+----
+nasty
+----
+
+====
+
+--
+// end::filter_sterilize_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#sterilize[sterile gem]
+
+Related::
+
+`<<decode_entities,decode_entities>>`, 
+`<<encode_entities,encode_entities>>`, 
+`<<transliterate,transliterate>>`, 
+`<<url_decode,url_decode>>`, 
+`<<url_encode,url_encode>>`
+****
+
+
+// tag::filter_transliterate[]
+[[transliterate]]
+[.filter_api_block]
+****
+// tag::filter_transliterate_params[]
+[horizontal]
+Name:: *Transliterate to ASCII*
+Key:: `transliterate`
+
+Description:: Convert Unicode [and accented ASCII] characters to their plain-text ASCII equivalents.
+
+
+// end::filter_transliterate_params[]
+
+// tag::filter_transliterate_examples[]
+Examples::
++
+--
+
+====
+.input
+[source,liquid]
+----
+{{ "šţɽĩɳģ" | transliterate }}
+----
+
+
+.output
+[source,liquid]
+----
+string
+----
+
+====
+
+--
+// end::filter_transliterate_examples[]
+
+[horizontal]
+Origin:: link:https://github.com/pbhogan/sterile#transliterate[sterile gem]
+
+Related::
+
+`<<decode_entities,decode_entities>>`, 
+`<<encode_entities,encode_entities>>`, 
+`<<sterilize,sterilize>>`, 
+`<<url_decode,url_decode>>`, 
+`<<url_encode,url_encode>>`
+****
+
+
+// tag::filter_url_decode[]
+[[url_decode]]
+[.filter_api_block]
+****
+// tag::filter_url_decode_params[]
+[horizontal]
+Name:: *URL Decode*
+Key:: `url_decode`
+
+
+// end::filter_url_decode_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/url_decode/[Shopify]
+
+Related::
+
+`<<decode_entities,decode_entities>>`, 
+`<<encode_entities,encode_entities>>`, 
+`<<sterilize,sterilize>>`, 
+`<<transliterate,transliterate>>`, 
+`<<url_encode,url_encode>>`
+****
+
+
+// tag::filter_url_encode[]
+[[url_encode]]
+[.filter_api_block]
+****
+// tag::filter_url_encode_params[]
+[horizontal]
+Name:: *URL Encode*
+Key:: `url_encode`
+
+
+// end::filter_url_encode_params[]
+
+[horizontal]
+Origin:: link:https://shopify.github.io/liquid/filters/url_encode/[Shopify]
+
+Related::
+
+`<<decode_entities,decode_entities>>`, 
+`<<encode_entities,encode_entities>>`, 
+`<<sterilize,sterilize>>`, 
+`<<transliterate,transliterate>>`, 
+`<<url_decode,url_decode>>`
+****
+
+
+
+// end::filter_[]
+
+// tag::group_string-recode[]
+
