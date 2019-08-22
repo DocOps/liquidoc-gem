@@ -252,7 +252,7 @@ module Jekyll
     #
     # Returns the formatted String.
     def array_to_serial(array, connector="and", serializer=", ")
-      con = " #{connector} " unless connector.empty?
+      con = "#{connector} " unless connector.empty?
       case array.length
       when 0
         out = ""
@@ -361,44 +361,36 @@ module Jekyll
       end
     end
 
-    def pop(array, num = 1)
+    def pop(array, num=1)
       return array unless array.is_a?(Array)
       num = Liquid::Utils.to_integer(num)
       new_ary = array.dup
       new_ary.pop(num)
-      new_ary
     end
 
-    def push(array, input)
+    def push(array, add)
       return array unless array.is_a?(Array)
       new_ary = array.dup
-      new_ary.push(input)
-      new_ary
+      new_ary.push(add)
     end
 
-    def shift(array, num = 1)
+    def shift(array, num=1)
       return array unless array.is_a?(Array)
       num = Liquid::Utils.to_integer(num)
       new_ary = array.dup
       new_ary.shift(num)
-      new_ary
     end
 
-    def unshift(array, input)
+    def unshift(array, add)
       return array unless array.is_a?(Array)
       new_ary = array.dup
-      new_ary.unshift(input)
-      new_ary
+      new_ary.unshift(add)
     end
 
-    def sample(input, num = 1)
-      return input unless input.respond_to?(:sample)
-      num = Liquid::Utils.to_integer(num) rescue 1
-      if num == 1
-        input.sample
-      else
-        input.sample(num)
-      end
+    def sample(array, num=1)
+      return array unless array.respond_to?(:sample)
+      num = Liquid::Utils.to_integer(num)
+      array.sample(num)
     end
 
     # Convert an object into its String representation for debugging

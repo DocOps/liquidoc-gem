@@ -95,7 +95,7 @@ def config_build config_file, config_vars={}, parse=false
     vars.add_data!(config_vars, "vars")
     config_dir = File.dirname(config_file)
     includes_dirs = config_dir.force_array
-    vars.add_data!(@includes_dirs, :includes_dirs)
+    vars.add_data!(includes_dirs, :includes_dirs)
     liquify(vars, config_file, config_out)
     config_file = config_out
     @logger.debug "Config parsed! Using #{config_out} for build."
@@ -112,7 +112,7 @@ def config_build config_file, config_vars={}, parse=false
     raise "ConfigFileError"
   end
   # TESTS
-  puts config[0].argify
+  # puts config[0].argify
   cfg = BuildConfig.new(config) # convert the config file to a new object called 'cfg'
   if @safemode
     commands = ""
@@ -599,7 +599,7 @@ class Build
     when "render"
       reqs = ["output"]
     end
-    for req in required
+    for req in reqs
       if (defined?(req)).nil?
         raise "ActionSettingMissing"
       end
@@ -1219,9 +1219,10 @@ class String
   end
 
   def prepend_lines chars
-    padding = chars.size
+    spaces = chars.size
     self.each_line do |l|
       l.gsub(/^/, spaces).gsub(/^\s*$/, '')
+    end
   end
 
   def indent options = {}
@@ -1280,21 +1281,35 @@ class Array
     end
     return struct
   end
+
+  def uniq_prop_list_item_vals_glob? property
+    # testing for uniquenes globally among all values in subarrays (list-formatted values) of all instances of the property across all nodes in the parent array
+    #
+    # Example:
+    #   array_of_hashes[0]['cue'] = ['one','two','three']
+    #   array_of_hashes[1]['cue'] = ['three','four','five']
+    #   array_of_hashes.uniq_prop_vals_globally?('cue')
+    #   #=> false
+    #   Due to the apperance of 'three' in both instances of cue.
+
+  end
+
 end
 
 class Hash
   include ForceArray
 
-  def to_array
+  def to_array op=nil
     # Converts a hash of key-value pairs to a flat array based on the first tier
     out = []
     self.each do |k,v|
+      v = "<RemovedObject>" if v.is_a? Enumerable and op == "flatten"
       out << {k => v}
     end
     return out
   end
 
-  def argify template='dump' , delim=' '
+  def argify template, delim
     # Converts a hash of key-value pairs to command-line option/argument listings
     # Can be called with optional arguments:
     # template :: Liquid-formatted parsing template string
@@ -1316,12 +1331,12 @@ class Hash
     # my_hash.argify('hyphhyph')          #=> --key1 val1 --key2 val2
     # my_hash.argify('hyphchar')          #=> -k val1 -k val2
     # my_hash.argify('paramequal')        #=> key1=val1 key2=val2
-    # my_hash.argify('-a {{opt}}={{arg}}')
-    #                                          #=> -a key1=val1 -a key2=val2
+    # my_hash.argify('-a {{opt}}={{arg}}')#=> -a key1=val1 -a key2=val2
     # my_hash.argify('liquid', ' ', "{{opt}} `{{arg}}`")
     #                                          #=> key1 `val1` key2 `val2`
     # my_hash.argify('valonly', '||')     #=> val1||val2
-    raise "InvalidObject" unless self.is_a? Hash
+    # raise "InvalidObject" unless self.is_a? Hash
+
     if template.contains_liquid?
       tp = template # use the passed Liquid template
     else
@@ -1342,22 +1357,29 @@ class Hash
         return "Liquid: Unrecognized argify template name"
       end
     end
-    tpl = Liquid::Template.parse(tp)
-    first = true
-    out = ''
-    self.each do |k,v|
-      # establish datasource
-      input = {"opt" => k, "arg" => v.quote_wrap(" ") }
-      if first
-        dlm = ""
-        first = false
-      else
-        dlm = delim
+    begin
+      tpl = Liquid::Template.parse(tp)
+      first = true
+      out = ''
+      self.each do |k,v|
+        # establish datasource
+        v = v.quote_wrap(" ") if v.is_a? String
+        v = "<Object>" if v.is_a? Enumerable
+        input = {"opt" => k, "arg" => v }
+        if first
+          dlm = ""
+          first = false
+        else
+          dlm = delim
+        end
+        out += dlm + tpl.render(input)
       end
-      out += dlm + tpl.render(input)
+    rescue
+      raise "Argify template processing failed"
     end
-    return out.to_str.strip
+    return out
   end
+
 end
 
 # Extending Liquid filters/text manipulation
@@ -1365,8 +1387,6 @@ module CustomFilters
   #
   # LiquiDoc custom filters
   #
-  include ForceArray
-
   def wwrap input, width=76
     input.wwrap
   end
@@ -1410,69 +1430,66 @@ module CustomFilters
     o = input.dup
     opts = {:delimiter=>delim}
     o.to_slug(opts)
-    o
   end
 
   def transliterate input
     o = input.dup
     o.transliterate
-    o
   end
 
   def smart_format input
     o = input.dup
     o.smart_format
-    o
   end
 
   def encode_entities input
     o = input.dup
     o.encode_entities
-    o
   end
 
   def titlecase input
     o = input.dup
     o.titlecase
-    o
   end
 
   def strip_tags input
     o = input.dup
     o.strip_tags
-    o
   end
 
   def sterilize input
     o = input.dup
     o.sterilize
-    o
   end
 
-  # Get all unique values for each item in an array, or each unique value of a desigated parameter in an array of hashes
+  # Get all unique values for each item in an array, or each unique value of a desigated
+  #  parameter in an array of hashes.
   #
-  # input - the object array
-  # property - (optional) parameter in which to select unique values (for hashes)
-  def uniq_prop_vals(array, property=nil)
-    return array unless array.is_a?(Array)
+  # @input    : the object array
+  # @property : (optional) parameter in which to select unique values (for hashes)
+  def uniq_prop_vals input, property=nil, global=false
+    return input unless input.is_a?(Array)
     unless property
-      new_ary = array.uniq
+      out = input.uniq
     else
-      new_ary = array.uniq { |i| i[property] }
+      new_ary = input.uniq { |i| i[property] }
+      out = new_ary.map { |i| i[property] }.compact
     end
-    new_ary.map { |i| i[property] }.compact
+    out
   end
 
   def asciidocify input
-    Asciidoctor.convert(input)
+    Asciidoctor.convert(input, doctype: "inline")
   end
 
-  def to_cli_args input, tpl="dump", delim=" "
-    input.argify(tpl, delim)
+  def to_cli_args input, tpl="paramequal", delim=" "
+    o = input.dup
+    o.argify(tpl, delim)
   end
 
-  def hash_to_array input
-    input.to_array
+  def hash_to_array input, op=nil
+    o = input.dup
+    o.to_array(op)
   end
 
   def holds_liquid input
@@ -1538,7 +1555,7 @@ command_parser = OptionParser.new do|opts|
 
   opts.on("--includes PATH[,PATH]", "Paths to directories where includes (partials) can be found." ) do |n|
     n.force_array!
-    puts n.class
+    # puts n.class
     # n.map { |p| @base_dir + p }
     @includes_dirs = n
   end

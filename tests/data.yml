@@ -1,15 +1,40 @@
 params_hash:
   key1: valu1
   key2: valu2
-  key2: valu3
+  key3: valu3
+  key4:
+    key4a: val4a
+  key5:
+    - val5a
+    - val5b
+
+params_hash_flat:
+  key1: valu1
+  key2: valu2
+  key3: valu3
+  key4: valu4
+  key5: valu5
 
 params_array:
-  - key1: valu1
-  - key2: valu2
-  - key3: valu3
+  - key1: node1
+    key2: node1
+  - key1: node2
+    key2: node2
+  - key1: node3
+  - key2: node4
 
 multi_params_array:
   - key_a: Kee-A-value
     second: Valuu2a
   - key_b: Kee-B-value
     second: Valuu2b
+
+simple_array:
+  - valu1
+  - valu2
+  - valu3
+  - valu3
+
+item_anoth:
+  - key1: anoth1
+    key2: anoth1
