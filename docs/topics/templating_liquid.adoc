@@ -1,3 +1,5 @@
+
+=== Filters
 = Templating with Liquid
 
 Shopify's open-source link:https://help.shopify.com/themes/liquid/basics[*Liquid*] templating language and engine are used for parsing complex variable data in plaintext markup, typically for generating iterated (looping) output.
@@ -23,8 +25,8 @@ This extends to YAML and JSON data formed as serialized at their root.
 [source,json]
 ----
 [
-	"Item1",
-	"Item2"
+"Item1",
+"Item2"
 ]
 ----
 
@@ -42,8 +44,8 @@ XML files typically contains arrays/collections nested in parent elements.
 [source,xml]
 ----
 <items>
-  <item>Item1</item>
-  <item>Item2</item>
+<item>Item1</item>
+<item>Item2</item>
 </items>
 ----
 
@@ -138,40 +140,40 @@ The implied structures are far more evident when displayed as HTML derived from 
 [source,html]
 ----
 <div class="dlist data-line-1">
-  <dl>
-    <dt class="hdlist1">A_B</dt>
-    <dd>
-      <p>A thing that *SnASFHE&amp;"\|+1Dsaghf</p>
-      <div class="hdlist data-line-5 simple">
-        <table>
-          <tr>
-            <td class="hdlist1">
-              Required
-            </td>
-            <td class="hdlist2">
-              <p><strong>Yes</strong></p>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </dd>
-    <dt class="hdlist1">G_H</dt>
-    <dd>
-      <p>Some text for &amp;hdf'" 1t`F</p>
-      <div class="hdlist data-line-11 simple">
-        <table>
-          <tr>
-            <td class="hdlist1">
-              Required
-            </td>
-            <td class="hdlist2">
-              <p>No</p>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </dd>
-  </dl>
+<dl>
+<dt class="hdlist1">A_B</dt>
+<dd>
+<p>A thing that *SnASFHE&amp;"\|+1Dsaghf</p>
+<div class="hdlist data-line-5 simple">
+<table>
+<tr>
+<td class="hdlist1">
+Required
+</td>
+<td class="hdlist2">
+<p><strong>Yes</strong></p>
+</td>
+</tr>
+</table>
+</div>
+</dd>
+<dt class="hdlist1">G_H</dt>
+<dd>
+<p>Some text for &amp;hdf'" 1t`F</p>
+<div class="hdlist data-line-11 simple">
+<table>
+<tr>
+<td class="hdlist1">
+Required
+</td>
+<td class="hdlist2">
+<p>No</p>
+</td>
+</tr>
+</table>
+</div>
+</dd>
+</dl>
 </div>
 ----
 
@@ -182,3 +184,39 @@ Remember, all this started out as that little old free-form text file.
 A_B A thing that *SnASFHE&"\|+1Dsaghf true
 G_H Some text for &hdf 1t`F false
 ----
+
+== LiquiDoc's Liquid API
+
+LiquiDoc's core Liquid templating engine uses standard Liquid tags and filters, with some key exceptions.
+
+=== Tags
+
+The standard set of tags used by Liquid (and Jekyll) will work in your LiquiDoc-processed templates, with a couple of significant caveats.
+
+LiquiDoc's version of Jekyll's *link* tag is quite different from Jekyll's.
+
+LiquiDoc implements the *include* tag very similarly to Jekyll, with variables handled as in Jekyll's version.
+However, there is no *include_relative* tag -- in LiquiDoc operations, all include paths are relative to the calling template's location.
+
+LiquiDoc does not have an equivalent of https://jekyllrb.com/docs/liquid/tags/#code-snippet-highlighting[Jekyll's *highlight* tag].
+
+For now, we will leave Liquid's core tags best documented in Shopify's official Liquid documentation, as augmented by their https://github.com/shopify/liquid/wiki/Liquid-for-Designers[Liquid for Designers].
+Ignore all of Jekyll's tag documentation when working on LiquiDoc templates, in favor of the following.
+Likewise, ignore the following and use https://jekyllrb.com/docs/liquid/tags/[Jekyll's custom tag reference] if you are working on Jekyll layouts or includes.
+
+include::
+
+
+link::
+
+=== Filters
+
+LiquiDoc is proud to offer the largest set of Liquid filters available in one place.
+We import _all_ of Liquid's core filters, and we every sensible custom Liquid filter that ships with Jekyll, as well as a number of our own and some imports from other Ruby text-manipulation packages.
+
+For your convenience, we present at least basic documentation for the complete set.
+We are committed to building this resource into API docs that cleanly cover the various implementations of Liquid, especially differentiating the two implementations of Liquid that make up LiquiDoc Ops: Jekyll's implementation for "`layouts`" and "`includes`" to _generate site HTML_, and LiquiDoc's implementation for _prebuilding data into useful new source content__.
+
+Here is a list of _all_ filters available in LiquiDoc, including where else they are supported.
+
+include::../snippets/built/liquid-api-filters.adoc[]

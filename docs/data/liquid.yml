@@ -8,7 +8,7 @@ filters:
     tags: [string,date,conversion]
     group: date-format
     examples:
-      - input: '{{ site.time | date_to_xmlschema }}'
+      - input: '{{ data.time | date_to_xmlschema }}'
         output: '2008-11-07T13:07:54-08:00'
 
   - key: date_to_rfc822
@@ -17,7 +17,7 @@ filters:
     tags: [string,date,conversion]
     group: date-format
     examples:
-      - input: '{{ site.time | date_to_rfc822 }}'
+      - input: '{{ data.time | date_to_rfc822 }}'
         output: 'Mon, 07 Nov 2008 13:07:54 -0800'
 
   - key: date_to_string
@@ -28,9 +28,9 @@ filters:
     tags: [string,date,conversion]
     group: date-format
     examples:
-      - input: '{{ site.time | date_to_string }}'
+      - input: '{{ data.time | date_to_string }}'
         output: '07 Nov 2008'
-      - input: '{{ site.time | date_to_string: "ordinal", "US" }}'
+      - input: '{{ data.time | date_to_string: "ordinal", "US" }}'
         output: 'Nov 7th, 2008'
 
   - key: date_to_long_string
@@ -41,9 +41,9 @@ filters:
     tags: [string,date,conversion]
     group: date-format
     examples:
-      - input: '{{ site.time | date_to_long_string }}'
+      - input: '{{ data.time | date_to_long_string }}'
         output: '07 November 2008'
-      - input: '{{ site.time | date_to_long_string: "ordinal" }}'
+      - input: '{{ data.time | date_to_long_string: "ordinal" }}'
         output: '7th November 2008'
 
   - key: where
@@ -73,14 +73,14 @@ filters:
     examples:
       - output: '[{"user"=>"ava","grad_year"=>2014},{"user"=>"julia","grad_year"=>2014}]'
         input: |-
-          {{ site.members | where_exp:"item",
+          {{ data.members | where_exp:"item",
           "item.grad_year == 2014" }}
         input: |-
-          {{ site.members | where_exp:"item",
+          {{ data.members | where_exp:"item",
           "item.grad_year < 2014" }}
       - output: '[{"project"=>"foobar"},{"project"=>"fooman"}]'
         input: |-
-          {{ site.members | where_exp:"item",
+          {{ data.members | where_exp:"item",
           "item.projects contains 'foo'" }}
 
   - key: group_by
@@ -91,10 +91,9 @@ filters:
     tags: [array]
     group: array-organizing
     examples:
-      - input: '{{ site.members | group_by:"grad_year" }}'
+      - input: '{{ data.members | group_by:"year" }}'
         output: |-
-          [{"name"=>"2013", "items"=>[...]},
-          {"name"=>"2014", "items"=>[...]}]
+
 
   - key: group_by_exp
     name: Group By Expression
@@ -105,7 +104,7 @@ filters:
     group: array-organizing
     examples:
       - input: |-
-          {{ site.members | group_by_exp: "item",
+          {{ data.members | group_by_exp: "item",
           "item.grad_year | truncate: 3, ''" }}
         output: |-
           [{"name"=>"201", "items"=>[...]},
@@ -188,7 +187,7 @@ filters:
       - input: '{{ tags_array | array_to_serial: "or" }}'
         output: 'foo, bar, or baz'
       - input: '{{ tags_array | shift | array_to_serial: "or" }}'
-        output: 'foo, baz'
+        output: 'foo or baz'
 
   - key: slugify
     name: Slugify
@@ -199,6 +198,8 @@ filters:
     examples:
       - input: '{{ "The _config.yml file" | slugify }}'
         output: 'the-config-yml-file'
+      - input: '{{ "The _config.yml file" | slugify: "_" }}'
+        output: 'the_config_yml_file'
 
   - key: jsonify
     name: Data To JSON
@@ -207,7 +208,7 @@ filters:
     description: Convert Hash or Array to JSON.
     group: object-conversion
     examples:
-      - input: '{{ site.data.projects | jsonify }}'
+      - input: '{{ data.projects | jsonify }}'
         output: <JSON object>
 
   - key: normalize_whitespace
@@ -247,9 +248,11 @@ filters:
     group: array-select
     examples:
       - input: '{{ site.pages | sample }}'
-        returns: An array of one randomly chosen array item.
+        returns: An array containing one randomly chosen array item.
+        test: false
       - input: '{{ site.pages | sample: 2 }}'
-        returns: An array of two randomly chosen array items.
+        returns: An array containing two randomly chosen array items.
+        test: false
 
   - key: to_integer
     name: To Integer

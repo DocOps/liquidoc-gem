@@ -61,5 +61,5 @@ Related::
 
 // end::filter_{{ f.key }}[]
 
-// tag::group_{{ grp }}[]
+// end::group_{{ grp }}[]
 {% endfor %}
