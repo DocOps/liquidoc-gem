@@ -839,7 +839,7 @@ def parse_regex data_file, pattern
 end
 
 # Parse given data using given template, generating given output
-def liquify data_obj, template_file, output
+def liquify data_obj, template_file, output="stdout"
   validate_file_input(template_file, "template")
   # inject :includes_dirs as needed
   data_obj.add_data!(@includes_dirs, :includes_dirs) unless data_obj.data[:includes_dirs]
@@ -853,7 +853,7 @@ def liquify data_obj, template_file, output
     @logger.error message
     raise message
   end
-  unless output.downcase == "stdout"
+  unless output == "stdout" || @output_type == "stdout"
     output_file = output
     generate_file(rendered, output_file)
   else # if stdout
@@ -1155,7 +1155,7 @@ def execute_command cmd
       contents = stdout
       if cmd.options['outfile']
         contents = "#{cmd.options['outfile']['prepend']}\n#{stdout}" if cmd.options['outfile']['prepend']
-        contents = "#{stdout}/n#{cmd.options['outfile']['append']}" if cmd.options['outfile']['append']
+        contents = "#{stdout}\n#{cmd.options['outfile']['append']}" if cmd.options['outfile']['append']
         generate_file(contents, cmd.options['outfile']['path'])
       end
       if cmd.options['stdout']
