@@ -1282,16 +1282,44 @@ class Array
     return struct
   end
 
-  def uniq_prop_list_item_vals_glob? property
+  def concatenate_property_instances property
+    # flattens the values of instances of a given property throughout an array of Hashes
+    all_arrays = []
+    self.each do |i|
+      all_arrays << i[property]
+    end
+    return all_arrays
+  end
+
+  def uniq_items_across_property_instances property
+    self.concatenate_property_instances(property).flatten.uniq
+  end
+
+  def list_items_duplicated_across_property_instances property
     # testing for uniquenes globally among all values in subarrays (list-formatted values) of all instances of the property across all nodes in the parent array
+    # returns an array of duplicate items among all the tested arrays
     #
     # Example:
     #   array_of_hashes[0]['cue'] = ['one','two','three']
     #   array_of_hashes[1]['cue'] = ['three','four','five']
-    #   array_of_hashes.uniq_prop_vals_globally?('cue')
-    #   #=> false
+    #   array_of_hashes.list_items_duplicated_across_property_instances('cue')
+    #   #=> ['three']
     #   Due to the apperance of 'three' in both instances of cue.
-
+    firsts = []
+    dupes = []
+    self.each do |node|
+      return ['non-array node present'] unless node[property].is_a? Array
+      node[property].each do |i|
+        dupes << i[property] if firsts.include? i[property]
+        firsts << i[property] unless firsts.include? i[property]
+      end
+    end
+    self.each do |node|
+      node[property].each do |i|
+        dupes << i unless firsts.include? i[property]
+      end
+    end
+    return dupes
   end
 
 end
@@ -1495,6 +1523,21 @@ module CustomFilters
   def holds_liquid input
     o = false
     o = true if input.contains_liquid?
+    o
+  end
+
+  def store_list_concat input, property
+    o = input.concatenate_property_instances(property)
+    o
+  end
+
+  def store_list_uniq input, property
+    o = input.uniq_items_across_property_instances(property)
+    o
+  end
+
+  def store_list_dupes input, property
+    o = input.uniq_items_across_property_instances(property)
     o
   end
 
