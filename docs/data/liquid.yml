@@ -743,27 +743,82 @@ filters:
       - input: '{{ "<b>nåsty</b>" | sterilize }}'
         output: nasty
 
+  - key: holds_liquid
+    name: Holds Liquid
+    source: LiquiDoc
+    support: [LiquiDoc]
+    description: Returns true if a snippet of text contains Liquid markup tags.
+    group: object-analysis
+    examples:
+      - input: |
+          {{ "{% assign var = 'anything' %}" | holds_liquid }}
+      - output: true
+
+  - key: argify
+    name: Argify
+    source: LiquiDoc
+    support: [LiquiDoc]
+    description: |
+      Reads the parameters in a Hash/Struct object and generates a string out of the keys and values according to a preset or custom template.
+      The first argument (optional) can be either a Liquid-formatted pattern or the name of a preset pattern (`hyph`, `hyphhyph`, `hyphchar`, `dump`, `paramequal`, `valonly`).
+      The second argument is reserved for a custom delimiter between the expressed pairs.
+    group: object-conversion
+    examples:
+      - input: "{{ object | argify }}"
+        output: "key1 val1 key2 val2 key3 key4 val4"
+      - input: "{{ object | argify: 'hyphhyph' }}"
+        output: "--key1 val1 --key2 val2 --key3 --key4 val4"
+      - output: "key1 `val1` key2 `val2` key3 key4 `val4`"
+        input: |
+          {% capture argpattern %}{{opt}} `{{arg}}`{% endcapture %}
+          {{ object | argify: argpattern }}
+
+
+  - key: store_list_concat
+    name: Metastore list concat
+    source: LiquiDoc
+    support: [LiquiDoc]
+    description: |
+      Concatenates each Array-formatted value of the same-named property across all nodes in an Array of Hashes (Metastore).
+      Accepts an Array of Hashes and the keyname of a property to collect from.
+    group: array-management
+    examples:
+      - input: |
+          {{ data.metastore | store_list_concat: "children" }}
+
+  - key: store_list_dupes
+    name: Metastore list duplicates
+    source: LiquiDoc
+    support: [LiquiDoc]
+    description: |
+      Returns a list of duplicate items among multiple Arrays across multiple same-named properties in an Array of Hashes (Metastore).
+      Accepts an Array of Hashes and the keyname of a Scalar property to check; returns the names of duplicate properties.
+    group: array-management
+    examples:
+      - input: |
+          {{ data.metastore | store_list_concat: "children" }}
+
 # UNSUPPORTED FILTERS
 
-  - key: Relative URL
+  - key: relative_url
     name: Relative URL
     source: Jekyll
     support: [Jekyll]
     supported: false
 
-  - key: Absolute URL
+  - key: absolute_url
     name: Absolute URL
     source: Jekyll
     support: [Jekyll]
     supported: false
 
-  - key: Markdownify
+  - key: markdownify
     name: Markdownify
     source: Jekyll
     support: [Jekyll]
     supported: false
 
-  - key: Smartify
+  - key: smartify
     name: Smartify
     source: Jekyll
     support: [Jekyll]

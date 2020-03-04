@@ -1,5 +1,3 @@
-
-=== Filters
 = Templating with Liquid
 
 Shopify's open-source link:https://help.shopify.com/themes/liquid/basics[*Liquid*] templating language and engine are used for parsing complex variable data in plaintext markup, typically for generating iterated (looping) output.
@@ -202,19 +200,21 @@ LiquiDoc does not have an equivalent of https://jekyllrb.com/docs/liquid/tags/#c
 
 For now, we will leave Liquid's core tags best documented in Shopify's official Liquid documentation, as augmented by their https://github.com/shopify/liquid/wiki/Liquid-for-Designers[Liquid for Designers].
 Ignore all of Jekyll's tag documentation when working on LiquiDoc templates, in favor of the following.
-Likewise, ignore the following and use https://jekyllrb.com/docs/liquid/tags/[Jekyll's custom tag reference] if you are working on Jekyll layouts or includes.
-
-include::
-
-
-link::
 
 === Filters
 
 LiquiDoc is proud to offer the largest set of Liquid filters available in one place.
-We import _all_ of Liquid's core filters, and we every sensible custom Liquid filter that ships with Jekyll, as well as a number of our own and some imports from other Ruby text-manipulation packages.
+LiquiDoc supports:
 
-For your convenience, we present at least basic documentation for the complete set.
+* _all_ of Liquid's core filters
+* nearly all of Jekyll's filters
+* several other Ruby text-manipulation packages
+* our own set of filters
+
+[IMPORTANT]
+Your Jekyll templates will still use Jekyll's exact set of filters. When we talk about LiquiDoc filters, we are referring to those used in LiquiDoc _parse_ actions only.
+
+For your convenience, here we present at least basic documentation for the complete set.
 We are committed to building this resource into API docs that cleanly cover the various implementations of Liquid, especially differentiating the two implementations of Liquid that make up LiquiDoc Ops: Jekyll's implementation for "`layouts`" and "`includes`" to _generate site HTML_, and LiquiDoc's implementation for _prebuilding data into useful new source content__.
 
 Here is a list of _all_ filters available in LiquiDoc, including where else they are supported.

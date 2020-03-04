@@ -882,7 +882,7 @@ def cli_liquify data_file=nil, template_file=nil, includes_dirs=nil, output_file
 end
 
 def regurgidata data_obj, output
-  # converts data files from one format directly to another
+  # converts data object from one format directly to another
   raise "UnrecognizedFileExtension" unless File.extname(output).match(/\.yml|\.json|\.xml|\.csv/)
   case File.extname(output)
     when ".yml"
@@ -1282,21 +1282,29 @@ class Array
     return struct
   end
 
+  # Get all unique values for each item in an array, or each unique value of a desigated
+  #  parameter in an array of hashes.
+  #
+  # @input    : the object array
+  # @property : (optional) parameter in which to select unique values (for hashes)
+  def unique_property_values property=nil
+    return self.uniq unless property
+    new_ary = self.uniq { |i| i[property] }
+    out = new_ary.map { |i| i[property] }.compact
+    out
+  end
+
   def concatenate_property_instances property
     # flattens the values of instances of a given property throughout an array of Hashes
     all_arrays = []
     self.each do |i|
       all_arrays << i[property]
     end
-    return all_arrays
+    return all_arrays.flatten
   end
 
-  def uniq_items_across_property_instances property
-    self.concatenate_property_instances(property).flatten.uniq
-  end
-
-  def list_items_duplicated_across_property_instances property
-    # testing for uniquenes globally among all values in subarrays (list-formatted values) of all instances of the property across all nodes in the parent array
+  def duplicate_property_values property
+    # testing for uniqueness globally among all values in subarrays (list-formatted values) of all instances of the property across all nodes in the parent array
     # returns an array of duplicate items among all the tested arrays
     #
     # Example:
@@ -1308,15 +1316,10 @@ class Array
     firsts = []
     dupes = []
     self.each do |node|
-      return ['non-array node present'] unless node[property].is_a? Array
+      return ['non-array property value present'] unless node[property].is_a? Array
       node[property].each do |i|
         dupes << i[property] if firsts.include? i[property]
-        firsts << i[property] unless firsts.include? i[property]
-      end
-    end
-    self.each do |node|
-      node[property].each do |i|
-        dupes << i unless firsts.include? i[property]
+        firsts << i[property]
       end
     end
     return dupes
@@ -1413,44 +1416,6 @@ end
 # Extending Liquid filters/text manipulation
 module CustomFilters
   #
-  # LiquiDoc custom filters
-  #
-  def wwrap input, width=76
-    input.wwrap
-  end
-
-  def plainwrap input
-    input.wwrap
-  end
-  def commentwrap input, token='# '
-    input.wwrap
-  end
-  def unwrap input # Not fully functional; inserts explicit '\n'
-    if input
-      token = "[g59hj1k]"
-      input.gsub(/\n\n/, token).gsub(/\n/, ' ').gsub(token, "\n\n")
-    end
-  end
-
-  def regexreplace input, regex, replacement=''
-    input.to_s.gsub(Regexp.new(regex), replacement.to_s)
-  end
-
-  # replacement for Jekyll's slugify
-  def slugify input, bridge="-", snip=true
-    s = input.to_s.downcase
-    s.gsub!(/[^a-z0-9]/, bridge)
-    if snip
-      while s.match("--")
-        s.gsub!("--", "-")
-      end
-      s.gsub!(/^-(.*)$/, "\\1")
-      s.gsub!(/^(.*)\-$/, "\\1")
-    end
-    s
-  end
-
-  #
   # sterile-based filters
   #
 
@@ -1490,20 +1455,43 @@ module CustomFilters
     o.sterilize
   end
 
-  # Get all unique values for each item in an array, or each unique value of a desigated
-  #  parameter in an array of hashes.
   #
-  # @input    : the object array
-  # @property : (optional) parameter in which to select unique values (for hashes)
-  def uniq_prop_vals input, property=nil, global=false
-    return input unless input.is_a?(Array)
-    unless property
-      out = input.uniq
-    else
-      new_ary = input.uniq { |i| i[property] }
-      out = new_ary.map { |i| i[property] }.compact
+  # Custom Filters
+  #
+
+  def wwrap input, width=76
+    input.wwrap
+  end
+
+  def plainwrap input
+    input.wwrap
+  end
+  def commentwrap input, token='# '
+    input.wwrap
+  end
+  def unwrap input # Not fully functional; inserts explicit '\n'
+    if input
+      token = "[g59hj1k]"
+      input.gsub(/\n\n/, token).gsub(/\n/, ' ').gsub(token, "\n\n")
     end
-    out
+  end
+
+  def regexreplace input, regex, replacement=''
+    input.to_s.gsub(Regexp.new(regex), replacement.to_s)
+  end
+
+  # replacement for Jekyll's slugify
+  def slugify input, bridge="-", snip=true
+    s = input.to_s.downcase
+    s.gsub!(/[^a-z0-9]/, bridge)
+    if snip
+      while s.match("--")
+        s.gsub!("--", "-")
+      end
+      s.gsub!(/^-(.*)$/, "\\1")
+      s.gsub!(/^(.*)\-$/, "\\1")
+    end
+    s
   end
 
   def asciidocify input
@@ -1513,6 +1501,7 @@ module CustomFilters
   def to_cli_args input, tpl="paramequal", delim=" "
     o = input.dup
     o.argify(tpl, delim)
+    o
   end
 
   def hash_to_array input, op=nil
@@ -1526,19 +1515,16 @@ module CustomFilters
     o
   end
 
-  def store_list_concat input, property
-    o = input.concatenate_property_instances(property)
-    o
+  def store_list_uniq input, property=nil
+    input.unique_property_values(property, global)
   end
 
-  def store_list_uniq input, property
-    o = input.uniq_items_across_property_instances(property)
-    o
+  def store_list_concat input, property
+    input.concatenate_property_instances(property)
   end
 
   def store_list_dupes input, property
-    o = input.uniq_items_across_property_instances(property)
-    o
+    input.duplicate_property_values(property)
   end
 
 end

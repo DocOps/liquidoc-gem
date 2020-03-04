@@ -63,6 +63,9 @@ include::topics/action_deploy.adoc[]
 [[action-execute]]
 include::topics/action_execute.adoc[]
 
+[[templating-liquid]]
+include::topics/templating_liquid.adoc[]
+
 [[config-full]]
 include::topics/config_full.adoc[]
 
