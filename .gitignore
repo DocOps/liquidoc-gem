@@ -4,3 +4,5 @@ pkg
 *.html
 *.pdf
 .DS_Store
+_build
+docs/_build
