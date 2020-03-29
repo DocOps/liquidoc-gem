@@ -40,7 +40,7 @@ require 'highline'
 @configs_dir = @base_dir + '_configs'
 @templates_dir = @base_dir + '_templates/'
 @data_dir = @base_dir + '_data/'
-@data_file = nil
+@data_files = nil
 @attributes_file_def = '_data/asciidoctor.yml'
 @attributes_file = @attributes_file_def
 @pdf_theme_file = 'theme/pdf-theme.yml'
@@ -75,17 +75,21 @@ FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
 # ===
 
 # Establish source, template, index, etc details for build jobs from a config file
-def config_build config_file, config_vars={}, parse=false
+def config_build config_file, config_vars={}, data_files=nil, parse=false
   @logger.debug "Using config file #{config_file}."
   validate_file_input(config_file, "config")
-  if config_vars.length > 0 or parse or contains_liquid(config_file)
+  if config_vars.length > 0 or data_files or parse or contains_liquid(config_file)
     @logger.debug "Config_vars: #{config_vars.length}"
   # If config variables are passed on the CLI, we want to parse the config file
   # and use the parsed version for the rest fo this routine
     config_out = "#{@build_dir}/pre/#{File.basename(config_file)}"
-    vars = DataObj.new()
-    vars.add_data!("vars", config_vars)
-    liquify(vars, config_file, config_out)
+    data_obj = DataObj.new()
+    if data_files
+      payload = get_payload(data_files)
+      data_obj.add_payload!(payload)
+    end
+    data_obj.add_data!(config_vars, "vars")
+    liquify(data_obj, config_file, config_out)
     config_file = config_out
     @logger.debug "Config parsed! Using #{config_out} for build."
     validate_file_input(config_file, "config")
@@ -131,41 +135,23 @@ def iterate_build cfg
       data_obj = DataObj.new()
       if step.data
         data_files = DataFiles.new(step.data)
-        data_files.sources.each do |src|
-          begin
-            data = ingest_data(src) # Extract data from file
-          rescue Exception => ex
-            @logger.error "#{ex.class}: #{ex.message}"
-            raise "DataFileReadFail (#{src.file})"
-          end
-          begin # Create build.data
-            if data_files.sources.size == 1
-              data_obj.add_data!("", data) if data.is_a? Hash
-              # Insert arrays into the data. scope, and for backward compatibility, hashes as well
-              data_obj.add_data!("data", data)
-            else
-              data_obj.add_data!(src.name, data) # Insert object under self-named scope
-            end
-          rescue Exception => ex
-            @logger.error "#{ex.class}: #{ex.message}"
-            raise "DataIngestFail (#{src.file})"
-          end
-        end
+        payload = get_payload(data_files)
+        data_obj.add_payload!(payload)
       end
       builds.each do |bld|
         build = Build.new(bld, type, data_obj) # create an instance of the Build class; Build.new accepts a 'bld' hash & action 'type'
         if build.template
-          # Prep & perform a Liquid-parsed build build
+          # Prep & perform a Liquid-parsed build
           @explainer.info build.message
-          build.add_data!("vars", build.variables) if build.variables
+          build.add_data!(build.variables, "vars") if build.variables
           liquify(build.data, build.template, build.output) # perform the liquify operation
         else # Prep & perform a direct conversion
           # Delete nested data and vars objects
           build.data.remove_scope("data")
           build.data.remove_scope("vars")
           # Add vars from CLI or config args
-          build.data.add_data!("", build.variables) unless build.variables.empty?
-          build.data.add_data!("", @passed_vars) unless @passed_vars.empty?
+          build.data.add_data!(build.variables) unless build.variables.empty?
+          build.data.add_data!(@passed_vars) unless @passed_vars.empty?
           regurgidata(build.data, build.output)
         end
       end
@@ -479,8 +465,8 @@ class Build
     @data unless @data.nil?
   end
 
-  def add_data! obj, scope
-    @data.add_data!(obj, scope)
+  def add_data! data, scope=""
+    @data.add_data!(data, scope)
   end
 
   # def vars
@@ -612,6 +598,7 @@ class Build
 end # class Build
 
 class DataSrc
+  # Organizes metadata about an ingestible data source
   # initialization means establishing a proper hash for the 'data' param
   def initialize sources
     @datasrc = {}
@@ -679,9 +666,9 @@ end # class DataSrc
 # DataFiles
 class DataFiles
   # Accepts a single String, Hash, or Array
-  # String must be a filename
-  # Hash must contain :file and optionally :type and :pattern
-  # Array must contain filenames as strings
+  # String must be a path/filename
+  # Hash must contain file: and optionally type: and pattern:
+  # Array must contain path/filenames as strings
   # Returns array of DataSrc objects
   def initialize data_sources
     @data_sources = []
@@ -696,6 +683,7 @@ class DataFiles
   end
 
   def sources
+    # An Array of DataSrc objects
     @data_sources
   end
 
@@ -714,17 +702,33 @@ class DataObj
     @data = {"vars" => {}}
   end
 
-  def add_data! scope="", data
+  def add_data! data, scope=""
     # Merges data into existing scope or creates a new scope
     if scope.empty? # store new object at root of this object
       self.data.merge!data
     else # store new object as a subordinate, named object
-      if self.data.key?(scope) # merge into existing key
-        self.data[scope].merge!data
+      if self.data.key?(scope) # merge/append into existing object
+        self.data[scope].merge!data if self.data[scope].is_a? Hash
+        self.data[scope] << data if self.data[scope].is_a? Array
       else # create a new key named after the scope
         scoped_hash = { scope => data }
         self.data.merge!scoped_hash
       end
+    end
+  end
+
+  def add_payload! payload
+    # Expects an Array of Hashes ([{name=>String, data=>Object},...])
+    if payload.size == 1
+      # If payload is a single Hash, store it at the root level (no scope)
+      self.add_data!(payload[0]['data']) if payload[0]['data'].is_a? Hash
+      # Insert arrays into the data. scope, and for backward compatibility, hashes as well
+      self.add_data!(payload[0]['data'], "data")
+    end
+    # For ALL payloads, create a self-named obj scope
+    payload.each do |obj|
+      puts obj
+      self.add_data!(obj['data'], obj['name']) # Insert object under self-named scope
     end
   end
 
@@ -770,7 +774,25 @@ end
 # PARSE-type build procs
 # ===
 
-# Pull in a semi-structured data file, converting contents to a Ruby hash
+def get_payload data_files
+  # data_files: a proper DataFile object
+  payload = []
+  data_files.sources.each do |src|
+    obj = {}
+    begin
+      data = ingest_data(src) # Extract data from file
+    rescue Exception => ex
+      @logger.error "#{ex.class}: #{ex.message}"
+      raise "DataFileReadFail (#{src.file})"
+    end
+    obj['name'] = src.name
+    obj['data'] = data
+    payload << obj
+  end
+  return payload
+end
+
+# Pull in a semi-structured data file, converting contents to a Ruby object
 def ingest_data datasrc
   raise "InvalidDataSrcObject" unless datasrc.is_a? DataSrc
   case datasrc.type
@@ -868,15 +890,15 @@ def cli_liquify data_file=nil, template_file=nil, output_file=nil, passed_vars
   if data_file
     df = DataFiles.new(data_file)
     ingested = ingest_data(df.sources[0])
-    data_obj.add_data!("", ingested)
+    data_obj.add_data!(ingested)
   end
   if template_file
-    data_obj.add_data!("data", ingested) if df
-    data_obj.add_data!("vars", passed_vars) if passed_vars
+    data_obj.add_data!(ingested, "data") if df
+    data_obj.add_data!(passed_vars, "vars") if passed_vars
     liquify(data_obj, template_file, output_file)
   else
     data_obj.remove_scope("vars")
-    data_obj.add_data!("", passed_vars) if passed_vars
+    data_obj.add_data!(passed_vars) if passed_vars
     regurgidata(data_obj, output_file)
   end
 end
@@ -1303,8 +1325,10 @@ command_parser = OptionParser.new do|opts|
     @config_file = @base_dir + n
   end
 
-  opts.on("-d PATH", "--data=PATH", "Semi-structured data source (input) path. Ex. path/to/data.yml. Required unless --config is called." ) do |n|
-    @data_file = @base_dir + n
+  opts.on("-d PATH[,PATH]", "--data=PATH[,PATH]", "Semi-structured data source (input) path or paths. Ex. path/to/data.yml or data/file1.yml,data/file2.json. Required unless --config is called; optional with config." ) do |n|
+    data_files = n.split(',')
+    data_files = data_files.map! {|file| @base_dir + file}
+    @data_files = DataFiles.new(data_files)
   end
 
   opts.on("-f PATH", "--from=PATH", "Directory to copy assets from." ) do |n|
@@ -1404,5 +1428,5 @@ unless @config_file
   end
 else
   @logger.debug "Executing... config_build"
-  config_build(@config_file, @passed_vars, @parseconfig)
+  config_build(@config_file, @passed_vars, @data_files, @parseconfig)
 end
