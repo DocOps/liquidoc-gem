@@ -727,7 +727,6 @@ class DataObj
     end
     # For ALL payloads, create a self-named obj scope
     payload.each do |obj|
-      puts obj
       self.add_data!(obj['data'], obj['name']) # Insert object under self-named scope
     end
   end
