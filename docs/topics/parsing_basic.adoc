@@ -12,3 +12,22 @@ This single-action invocation of LiquiDoc ingests data from YAML file `sample.ym
 [TIP]
 Add `--verbose` to any `liquidoc` command to see the steps the utility is
 taking.
+
+To ingest data from multiple files, pass multiple paths to the `-d`/`--data` option, separated by commas.
+
+.Example -- Use multiple datasources to parse a template
+----
+bundle exec liquidoc -d _data/source1.yml,_data/source2.json -t my_template.html -o my_artifact.html
+----
+
+In this example, data from `source1.yml` will be passed to the template in an object called `source1`, and `source2.json` will ingested as the `source2` object.
+
+.Example my_template.html -- Liquid expression of data from multiple file ingest
+[source,liquid]
+----
+{{ source1.param1 }}
+
+{% for item in source2 %}
+{{ item.name }}
+{% endfor %}
+----

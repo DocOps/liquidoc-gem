@@ -172,3 +172,43 @@ In Liquid, loops can only iterate through arrays.
 Comma-delimited lists can be converted to arrays using the *split* filter to divide its contents into items.
 The `| split: ","` notation here tells Liquid we wish to apply this filter so
 the variable `portals` can become an array.
+
+== Ingesting data files into configs
+
+Just as a dynamic config can <<config-variables,accept variables>> at build time, it can also be passed whole data files, including complex objects, also at build time.
+Just assign data files to the command using the `--data` flag, with multiple files separated by commas.
+
+.Example ingested data objects command
+ bundle exec liquidoc -c _configs/build.yml -d data/products.yml,data/volumes.yml
+
+This command tells LiquiDoc to pass the `products.yml` and `volumes.yml` files into the dynamic build config, where they can be referenced as variables in Liquid using these object names.
+
+.Example config loop using ingested data objects
+[source,yaml]
+----
+{% assign prods = products.products %}
+{% assign vols = global.volumes %}
+{% assign manuals = vols | where: 'type','manual' %}
+{% for prod in prods %}
+- action: parse
+  data: data/manifests/{{ prod.slug }}.yml
+  builds:
+    - output: _build/includes/topics-meta_{{ prod.slug }}_portal.adoc
+      template: _templates/liquid/topics-meta.asciidoc
+  {% assign prod_vols = vols | where: "prod",prod.slug | where: "type","manual" %}
+  {% for vol in prod_vols %}
+    - output: _build/content/{{ prod.slug }}/{{ vol.slug }}-index.adoc
+      template: _templates/liquid/manual-index.asciidoc
+      variables:
+        title: "{{ vol.title }}"
+  {% endfor %}
+{% endfor %}
+----
+
+Just as with multi-file parse actions, top-level scopes are named after the file from which they were ingested.
+This means we must tell LiquiDoc which files to use.
+Since we are assigning files to the build routine itself, we attach them on the commandline.
+
+.Example commandline with --data option
+[source,shell]
+ bundle exec liquidoc -c build-config.yml -d data/global.yml,data/products.yml
