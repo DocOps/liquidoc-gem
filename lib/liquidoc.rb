@@ -884,16 +884,15 @@ def liquify data_obj, template_file, output
   end
 end
 
-def cli_liquify data_file=nil, template_file=nil, output_file=nil, passed_vars
+def cli_liquify data_files=nil, template_file=nil, output_file=nil, passed_vars
   # converts command-line options into liquify or regurgidata inputs
   data_obj = DataObj.new()
-  if data_file
-    df = DataFiles.new(data_file)
-    ingested = ingest_data(df.sources[0])
-    data_obj.add_data!(ingested)
+  if data_files
+    payload = get_payload(data_files)
+    data_obj.add_payload!(payload)
   end
   if template_file
-    data_obj.add_data!(ingested, "data") if df
+    # data_obj.add_data!(ingested, "data") if df
     data_obj.add_data!(passed_vars, "vars") if passed_vars
     liquify(data_obj, template_file, output_file)
   else
@@ -1420,8 +1419,8 @@ explainer_init
 
 unless @config_file
   @logger.debug "Executing config-free build based on API/CLI arguments alone."
-  if @data_file
-    cli_liquify(@data_file, @template_file, @output_file, @passed_vars)
+  if @data_files
+    cli_liquify(@data_files, @template_file, @output_file, @passed_vars)
   end
   if @index_file
     @logger.warn "Rendering via command line arguments is not yet implemented. Use a config file."
