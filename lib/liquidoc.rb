@@ -588,7 +588,7 @@ class Build
     when "render"
       reqs = ["output"]
     end
-    for req in required
+    for req in reqs
       if (defined?(req)).nil?
         raise "ActionSettingMissing"
       end
@@ -1062,6 +1062,7 @@ def asciidocify doc, build
   # Perform the aciidoctor convert
   if build.backend == "pdf"
     @logger.info "Generating PDF. This can take some time..."
+    attrs.merge!({"pdf-theme"=>build.style}) if build.style
   end
   Asciidoctor.convert_file(
     doc.index,
@@ -1073,7 +1074,7 @@ def asciidocify doc, build
     safe: "unsafe",
     sourcemap: true,
     verbose: @verbose,
-    mkdirs: true
+    mkdirs: true,
   )
   @logger.info "Rendered file #{to_file}."
 end
