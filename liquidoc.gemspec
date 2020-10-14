@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = %q{A highly configurable command-line tool for parsing data and content in common flat-file formats.}
   spec.description   = %q{LiquiDoc conveniently harnesses the power of Liquid templates, flat-file data formats such as YAML, JSON, XML, and CSV, as well as AsciiDoc markup and powerful Asciidoctor output capabilities -- all in a single command-line tool.}
-  spec.homepage      = "https://github.com/scalingdata/liquidoc"
+  spec.homepage      = "https://github.com/DocOps/liquidoc"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
   # to allow pushing to a single host or delete this section to allow pushing to any host.

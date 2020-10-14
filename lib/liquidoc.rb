@@ -57,6 +57,7 @@ require 'highline'
 @search_index = false
 @search_index_dry = ''
 @safemode = true
+@render_count = 0
 
 # Instantiate the main Logger object, which is always running
 @logger = Logger.new(STDOUT)
@@ -67,6 +68,7 @@ end
 
 
 FileUtils::mkdir_p("#{@build_dir}") unless File.exists?("#{@build_dir}")
+FileUtils::rm_rf("#{@build_dir}/pre")
 FileUtils::mkdir_p("#{@build_dir}/pre") unless File.exists?("#{@build_dir}/pre")
 
 
@@ -1019,6 +1021,8 @@ def derive_backend type, out_file
 end
 
 def render_doc doc, build
+  @render_count += 1
+  @logger.info "### Build ##{@render_count}"
   case build.backend
   when "html5", "pdf"
     asciidocify(doc, build)
@@ -1090,18 +1094,19 @@ def generate_site doc, build
     attrs.merge!(build.attributes) if build.attributes
     attrs = {"asciidoctor" => {"attributes" => attrs} }
     attrs_yaml = attrs.to_yaml # Convert it all back to Yaml, as we're going to write a file to feed back to Jekyll
-    File.open("#{@build_dir}/pre/_attributes.yml", 'w') { |file| file.write(attrs_yaml) }
-    build.add_config_file("#{@build_dir}/pre/_attributes.yml")
+    File.open("#{@build_dir}/pre/attributes_#{@render_count}.yml", 'w') { |file| file.write(attrs_yaml) }
+    build.add_config_file("#{@build_dir}/pre/attributes_#{@render_count}.yml")
     config_list = build.prop_files_array.join(',') # flatten the Array back down for the CLI
     quiet = "--quiet" if @quiet || @explicit
     if build.props['arguments']
-      opts_args_file = "#{@build_dir}/pre/jekyll_opts_args.yml"
+      opts_args_file = "#{@build_dir}/pre/jekyll_opts_args_#{@render_count}.yml"
       opts_args = build.props['arguments']
       File.open(opts_args_file, 'w') { |file|
       file.write(opts_args.to_yaml)}
       config_list << ",#{opts_args_file}"
     end
     base_args = "--config #{config_list}"
+    base_args += " --trace" if @verbose
     command = "bundle exec jekyll build #{base_args} #{quiet}"
     if @search_index
       # TODO enable config-based admin api key ingest once config is dynamic
