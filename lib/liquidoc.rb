@@ -45,7 +45,6 @@ require 'highline'
 @attributes_file = @attributes_file_def
 @pdf_theme_file = 'theme/pdf-theme.yml'
 @fonts_dir = 'theme/fonts/'
-@output_filename = 'index'
 @attributes = {}
 @passed_attrs = {}
 @passed_vars = {}
@@ -888,6 +887,11 @@ end
 def cli_liquify data_files=nil, template_file=nil, output_file=nil, passed_vars
   # converts command-line options into liquify or regurgidata inputs
   data_obj = DataObj.new()
+  if output_file
+    output = output_file
+  else
+    output = "stdout"
+  end
   if data_files
     payload = get_payload(data_files)
     data_obj.add_payload!(payload)
@@ -895,11 +899,11 @@ def cli_liquify data_files=nil, template_file=nil, output_file=nil, passed_vars
   if template_file
     # data_obj.add_data!(ingested, "data") if df
     data_obj.add_data!(passed_vars, "vars") if passed_vars
-    liquify(data_obj, template_file, output_file)
+    liquify(data_obj, template_file, output)
   else
     data_obj.remove_scope("vars")
     data_obj.add_data!(passed_vars) if passed_vars
-    regurgidata(data_obj, output_file)
+    regurgidata(data_obj, output)
   end
 end
 
@@ -1344,7 +1348,7 @@ command_parser = OptionParser.new do|opts|
   end
 
   opts.on("-o PATH", "--output=PATH", "Output file path for generated content. Ex. path/to/file.adoc. Required unless --config is called.") do |n|
-    @output_file = @base_dir + n
+    @output = @base_dir + n
   end
 
   opts.on("-t PATH", "--template=PATH", "Path to liquid template. Required unless --configuration is called." ) do |n|
@@ -1369,7 +1373,7 @@ command_parser = OptionParser.new do|opts|
   end
 
   opts.on("--stdout", "Puts the output in STDOUT instead of writing to a file.") do
-    @output_type = "stdout"
+    @output = "stdout"
   end
 
   opts.on("--deploy", "EXPERIMENTAL: Trigger a jekyll serve operation against the destination dir of a Jekyll render step.") do
@@ -1425,7 +1429,7 @@ explainer_init
 unless @config_file
   @logger.debug "Executing config-free build based on API/CLI arguments alone."
   if @data_files
-    cli_liquify(@data_files, @template_file, @output_file, @passed_vars)
+    cli_liquify(@data_files, @template_file, @output, @passed_vars)
   end
   if @index_file
     @logger.warn "Rendering via command line arguments is not yet implemented. Use a config file."
