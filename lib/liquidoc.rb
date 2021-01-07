@@ -1298,6 +1298,16 @@ module CustomFilters
     input.to_s.gsub(Regexp.new(regex), replacement.to_s)
   end
 
+  def to_yaml input
+    o = input.to_yaml
+    o = o.gsub(/^\-\-\-$\n/, "")
+    o
+  end
+
+  def to_json input
+    o = input.to_json
+    o
+  end
 end
 
 # register custom Liquid filters
