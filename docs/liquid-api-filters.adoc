@@ -1,3 +1,6 @@
+= Liquid API
+:toc: left
+
 // tag::group_array-management[]
 == Array Management Filters
 
@@ -3476,4 +3479,3 @@ Related::
 // end::filter_[]
 
 // tag::group_string-recode[]
-
